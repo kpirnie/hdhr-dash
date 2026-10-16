@@ -2,50 +2,49 @@
  * HDHomeRun Dashboard PWA
  */
 
-const STORAGE_ACTIVE_IP = 'hdhr_active_ip';
-const STORAGE_DEVICES = 'hdhr_saved_devices';
-const STORAGE_THEME = 'hdhr_theme';
-const STORAGE_CONFIRM_DELETE = 'hdhr_confirm_delete';
-const STORAGE_ACTIVE_TAB = 'hdhr_active_tab';
-const STORAGE_STATIONS_CACHE = 'hdhr_stations_cache';
-const STORAGE_STATIONS_LAST_SYNC = 'hdhr_stations_last_sync';
-const STORAGE_STATIONS_APP_VERSION = 'hdhr_stations_app_ver';
+const STORAGE_ACTIVE_IP = "hdhr_active_ip";
+const STORAGE_DEVICES = "hdhr_saved_devices";
+const STORAGE_CONFIRM_DELETE = "hdhr_confirm_delete";
+const STORAGE_ACTIVE_TAB = "hdhr_active_tab";
+const STORAGE_STATIONS_CACHE = "hdhr_stations_cache";
+const STORAGE_STATIONS_LAST_SYNC = "hdhr_stations_last_sync";
+const STORAGE_STATIONS_APP_VERSION = "hdhr_stations_app_ver";
 const STATIONS_SYNC_INTERVAL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days (weekly)
-const APP_VERSION = '2.0.92';
+const APP_VERSION = "3.0.1";
 
 /**
  * Calculates broadcast band (UHF / VHF), band detail, and physical RF channel number
  * based on standard ATSC broadcast frequency (in Hz).
  */
 function getRfChannelInfo(freq) {
-  if (!freq || typeof freq !== 'number') return null;
+  if (!freq || typeof freq !== "number") return null;
   const fMhz = freq / 1e6;
-  let band = 'UHF';
-  let bandDetail = 'UHF';
+  let band = "UHF";
+  let bandDetail = "UHF";
   let rf = null;
 
   if (fMhz >= 54 && fMhz < 72) {
     rf = 2 + Math.round((fMhz - 57) / 6);
-    band = 'VHF';
-    bandDetail = 'VHF-Low';
+    band = "VHF";
+    bandDetail = "VHF-Low";
   } else if (fMhz >= 76 && fMhz < 88) {
     rf = 5 + Math.round((fMhz - 79) / 6);
-    band = 'VHF';
-    bandDetail = 'VHF-Low';
+    band = "VHF";
+    bandDetail = "VHF-Low";
   } else if (fMhz >= 174 && fMhz < 216) {
     rf = 7 + Math.round((fMhz - 177) / 6);
-    band = 'VHF';
-    bandDetail = 'VHF-High';
+    band = "VHF";
+    bandDetail = "VHF-High";
   } else if (fMhz >= 470 && fMhz <= 806) {
     rf = 14 + Math.round((fMhz - 473) / 6);
-    band = 'UHF';
-    bandDetail = 'UHF';
+    band = "UHF";
+    bandDetail = "UHF";
   } else if (fMhz < 300) {
-    band = 'VHF';
-    bandDetail = 'VHF';
+    band = "VHF";
+    bandDetail = "VHF";
   } else {
-    band = 'UHF';
-    bandDetail = 'UHF';
+    band = "UHF";
+    bandDetail = "UHF";
   }
 
   return {
@@ -58,26 +57,22 @@ function getRfChannelInfo(freq) {
 
 // Affiliate Network Logos
 const NETWORK_LOGOS = {
-  ABC: 'assets/logos/abc.svg',
-  CBS: 'assets/logos/cbs.svg',
-  NBC: 'assets/logos/nbc.svg',
-  FOX: 'assets/logos/fox.svg',
-  CW: 'assets/logos/cw.svg',
-  PBS: 'assets/logos/pbs.svg',
-  CBC: 'assets/logos/cbc.svg',
-  CTV: 'assets/logos/ctv.svg',
-  Global: 'assets/logos/global.svg',
-  Citytv: 'assets/logos/citytv.svg',
+  ABC: "assets/logos/abc.svg",
+  CBS: "assets/logos/cbs.svg",
+  NBC: "assets/logos/nbc.svg",
+  FOX: "assets/logos/fox.svg",
+  CW: "assets/logos/cw.svg",
+  PBS: "assets/logos/pbs.svg",
+  CBC: "assets/logos/cbc.svg",
+  CTV: "assets/logos/ctv.svg",
+  Global: "assets/logos/global.svg",
+  Citytv: "assets/logos/citytv.svg",
 };
-
-// Immediately apply saved theme to documentElement to avoid flash
-const initialTheme = localStorage.getItem(STORAGE_THEME) || 'dark';
-document.documentElement.setAttribute('data-theme', initialTheme);
 
 // Application State
 const state = {
   currentIp: localStorage.getItem(STORAGE_ACTIVE_IP) || null,
-  devices: JSON.parse(localStorage.getItem(STORAGE_DEVICES) || '[]'),
+  devices: JSON.parse(localStorage.getItem(STORAGE_DEVICES) || "[]"),
   deviceInfo: null,
   tuners: [],
   lineup: [],
@@ -86,23 +81,23 @@ const state = {
   episodes: [],
   rules: [],
   activePlaybacks: [],
-  dvrSubView: 'series', // 'series', 'episodes', 'rules'
+  dvrSubView: "series", // 'series', 'episodes', 'rules'
   selectedSeriesId: null,
   hasDvr: false,
   dvrStorageUrl: null,
-  activeTab: 'tuners',
+  activeTab: "tuners",
   isPolling: true,
   pollInterval: 2500,
   pollTimer: null,
-  filterText: '',
+  filterText: "",
   filters: {
-    status: 'allowed', // 'allowed', 'all', 'favorites', 'hidden'
-    band: 'all',       // 'all', 'vhf', 'vhf-low', 'vhf-high', 'uhf'
-    format: 'all',     // 'all', 'atsc3', 'atsc1', 'hd', 'sd'
-    drm: 'all',        // 'all', 'drm', 'nodrm'
+    status: "allowed", // 'allowed', 'all', 'favorites', 'hidden'
+    band: "all", // 'all', 'vhf', 'vhf-low', 'vhf-high', 'uhf'
+    format: "all", // 'all', 'atsc3', 'atsc1', 'hd', 'sd'
+    drm: "all", // 'all', 'drm', 'nodrm'
   },
   selectedTuner: null, // e.g. 'tuner0'
-  tunerHistory: {},    // { tuner0: [ { timestamp, strength, quality, symbol, rate, isActive }, ... ] }
+  tunerHistory: {}, // { tuner0: [ { timestamp, strength, quality, symbol, rate, isActive }, ... ] }
   tunerSampleInterval: 1000, // 1000, 5000, 10000, 60000
   tunerPollTimer: null,
   isGraphPaused: false,
@@ -116,138 +111,143 @@ const state = {
 };
 
 // Global DOM Elements
-const deviceSelect = document.getElementById('device-select');
-const connectionDot = document.getElementById('connection-status-dot');
-const btnTogglePoll = document.getElementById('btn-toggle-poll');
-const pollBtnLabel = document.getElementById('poll-btn-label');
-const pollIntervalSelect = document.getElementById('poll-interval-select');
-const globalAlert = document.getElementById('global-alert');
-const btnInstall = document.getElementById('btn-install');
-const navTabs = document.querySelectorAll('.nav-tab');
-const tabViews = document.querySelectorAll('.tab-view');
-const themeSelect = document.getElementById('theme-select');
-const prefThemeSelect = document.getElementById('pref-theme-select');
+const deviceSelect = document.getElementById("device-select");
+const connectionDot = document.getElementById("connection-status-dot");
+const btnTogglePoll = document.getElementById("btn-toggle-poll");
+const pollBtnLabel = document.getElementById("poll-btn-label");
+const pollIntervalSelect = document.getElementById("poll-interval-select");
+const globalAlert = document.getElementById("global-alert");
+const btnInstall = document.getElementById("btn-install");
+const navTabs = document.querySelectorAll(".nav-tab");
+const tabViews = document.querySelectorAll(".tab-view");
 
 // Tuner Elements
-const tunersOverview = document.getElementById('tuners-overview');
-const tunersGrid = document.getElementById('tuners-grid');
-const tunerSummaryBadge = document.getElementById('tuner-summary-badge');
-const btnRefreshTuners = document.getElementById('btn-refresh-tuners');
+const tunersOverview = document.getElementById("tuners-overview");
+const tunersGrid = document.getElementById("tuners-grid");
+const tunerSummaryBadge = document.getElementById("tuner-summary-badge");
+const btnRefreshTuners = document.getElementById("btn-refresh-tuners");
 
 // Tuner Detail & Chart Elements
-const tunerDetailView = document.getElementById('tuner-detail-view');
-const btnBackToTuners = document.getElementById('btn-back-to-tuners');
-const detailStatusDot = document.getElementById('detail-status-dot');
-const detailStatusText = document.getElementById('detail-status-text');
-const detailTunerName = document.getElementById('detail-tuner-name');
-const detailSharedBadge = document.getElementById('detail-shared-badge');
-const detailChannelLogo = document.getElementById('detail-channel-logo');
-const detailChannelName = document.getElementById('detail-channel-name');
-const detailChannelLocality = document.getElementById('detail-channel-locality');
-const detailChannelNumber = document.getElementById('detail-channel-number');
-const detailChannelBand = document.getElementById('detail-channel-band');
-const detailChannelRf = document.getElementById('detail-channel-rf');
-const detailClientsList = document.getElementById('detail-clients-list');
-const detailNetworkRate = document.getElementById('detail-network-rate');
-const sampleRatePills = document.querySelectorAll('#sample-rate-pills .pill');
-const graphLiveIndicator = document.getElementById('graph-live-indicator');
-const btnToggleGraphPause = document.getElementById('btn-toggle-graph-pause');
-const detailIdleNotice = document.getElementById('detail-idle-notice');
+const tunerDetailView = document.getElementById("tuner-detail-view");
+const btnBackToTuners = document.getElementById("btn-back-to-tuners");
+const detailStatusDot = document.getElementById("detail-status-dot");
+const detailStatusText = document.getElementById("detail-status-text");
+const detailTunerName = document.getElementById("detail-tuner-name");
+const detailSharedBadge = document.getElementById("detail-shared-badge");
+const detailChannelLogo = document.getElementById("detail-channel-logo");
+const detailChannelName = document.getElementById("detail-channel-name");
+const detailChannelLocality = document.getElementById(
+  "detail-channel-locality",
+);
+const detailChannelNumber = document.getElementById("detail-channel-number");
+const detailChannelBand = document.getElementById("detail-channel-band");
+const detailChannelRf = document.getElementById("detail-channel-rf");
+const detailClientsList = document.getElementById("detail-clients-list");
+const detailNetworkRate = document.getElementById("detail-network-rate");
+const sampleRatePills = document.querySelectorAll("#sample-rate-pills .pill");
+const graphLiveIndicator = document.getElementById("graph-live-indicator");
+const btnToggleGraphPause = document.getElementById("btn-toggle-graph-pause");
+const detailIdleNotice = document.getElementById("detail-idle-notice");
 
-const statCurrentStrength = document.getElementById('stat-current-strength');
-const statMinStrength = document.getElementById('stat-min-strength');
-const statAvgStrength = document.getElementById('stat-avg-strength');
-const statMaxStrength = document.getElementById('stat-max-strength');
+const statCurrentStrength = document.getElementById("stat-current-strength");
+const statMinStrength = document.getElementById("stat-min-strength");
+const statAvgStrength = document.getElementById("stat-avg-strength");
+const statMaxStrength = document.getElementById("stat-max-strength");
 
-const statCurrentQuality = document.getElementById('stat-current-quality');
-const statMinQuality = document.getElementById('stat-min-quality');
-const statAvgQuality = document.getElementById('stat-avg-quality');
-const statMaxQuality = document.getElementById('stat-max-quality');
+const statCurrentQuality = document.getElementById("stat-current-quality");
+const statMinQuality = document.getElementById("stat-min-quality");
+const statAvgQuality = document.getElementById("stat-avg-quality");
+const statMaxQuality = document.getElementById("stat-max-quality");
 
-const statCurrentSymbol = document.getElementById('stat-current-symbol');
-const statMinSymbol = document.getElementById('stat-min-symbol');
-const statAvgSymbol = document.getElementById('stat-avg-symbol');
-const statMaxSymbol = document.getElementById('stat-max-symbol');
+const statCurrentSymbol = document.getElementById("stat-current-symbol");
+const statMinSymbol = document.getElementById("stat-min-symbol");
+const statAvgSymbol = document.getElementById("stat-avg-symbol");
+const statMaxSymbol = document.getElementById("stat-max-symbol");
 
-const chartSampleCount = document.getElementById('chart-sample-count');
-const chartContainer = document.getElementById('chart-container');
-const tunerChartSvg = document.getElementById('tuner-chart-svg');
-const chartGridGroup = document.getElementById('chart-grid-group');
-const chartPathsGroup = document.getElementById('chart-paths-group');
-const chartCrosshairGroup = document.getElementById('chart-crosshair-group');
-const chartTooltip = document.getElementById('chart-tooltip');
-const chartTimeStart = document.getElementById('chart-time-start');
-const chartTimeMid = document.getElementById('chart-time-mid');
-const chartTimeNow = document.getElementById('chart-time-now');
+const chartSampleCount = document.getElementById("chart-sample-count");
+const chartContainer = document.getElementById("chart-container");
+const tunerChartSvg = document.getElementById("tuner-chart-svg");
+const chartGridGroup = document.getElementById("chart-grid-group");
+const chartPathsGroup = document.getElementById("chart-paths-group");
+const chartCrosshairGroup = document.getElementById("chart-crosshair-group");
+const chartTooltip = document.getElementById("chart-tooltip");
+const chartTimeStart = document.getElementById("chart-time-start");
+const chartTimeMid = document.getElementById("chart-time-mid");
+const chartTimeNow = document.getElementById("chart-time-now");
 
 // Lineup Elements
-const lineupSearch = document.getElementById('lineup-search');
-const btnLineupFilters = document.getElementById('btn-lineup-filters');
-const lineupFilterMenu = document.getElementById('lineup-filter-menu');
-const lineupFilterActiveCount = document.getElementById('lineup-filter-active-count');
-const filterStatusSelect = document.getElementById('filter-status-select');
-const filterBandSelect = document.getElementById('filter-band-select');
-const filterFormatSelect = document.getElementById('filter-format-select');
-const filterDrmSelect = document.getElementById('filter-drm-select');
-const btnResetFilters = document.getElementById('btn-reset-filters');
-const btnClearFilters = document.getElementById('btn-clear-filters');
-const btnApplyFilters = document.getElementById('btn-apply-filters');
-const btnQuickClearFilters = document.getElementById('btn-quick-clear-filters');
-const lineupActiveChips = document.getElementById('lineup-active-chips');
-const lineupTbody = document.getElementById('lineup-tbody');
-const lineupCountBadge = document.getElementById('lineup-count-badge');
-const btnRefreshLineup = document.getElementById('btn-refresh-lineup');
-const btnExportM3u = document.getElementById('btn-export-m3u');
+const lineupSearch = document.getElementById("lineup-search");
+const btnLineupFilters = document.getElementById("btn-lineup-filters");
+const lineupFilterMenu = document.getElementById("lineup-filter-menu");
+const lineupFilterActiveCount = document.getElementById(
+  "lineup-filter-active-count",
+);
+const filterStatusSelect = document.getElementById("filter-status-select");
+const filterBandSelect = document.getElementById("filter-band-select");
+const filterFormatSelect = document.getElementById("filter-format-select");
+const filterDrmSelect = document.getElementById("filter-drm-select");
+const btnResetFilters = document.getElementById("btn-reset-filters");
+const btnClearFilters = document.getElementById("btn-clear-filters");
+const btnApplyFilters = document.getElementById("btn-apply-filters");
+const btnQuickClearFilters = document.getElementById("btn-quick-clear-filters");
+const lineupActiveChips = document.getElementById("lineup-active-chips");
+const lineupTbody = document.getElementById("lineup-tbody");
+const lineupCountBadge = document.getElementById("lineup-count-badge");
+const btnRefreshLineup = document.getElementById("btn-refresh-lineup");
+const btnExportM3u = document.getElementById("btn-export-m3u");
 
 // DVR Elements
-const dvrEngineInfo = document.getElementById('dvr-engine-info');
-const dvrNotDetected = document.getElementById('dvr-not-detected');
-const recordingsContainer = document.getElementById('recordings-container');
-const recordingsCountBadge = document.getElementById('recordings-count-badge');
-const btnRefreshRecordings = document.getElementById('btn-refresh-recordings');
-const btnRecheckDvr = document.getElementById('btn-recheck-dvr');
-const dvrStorageBarCard = document.getElementById('dvr-storage-bar-card');
-const storageSpaceText = document.getElementById('storage-space-text');
-const storageBarFill = document.getElementById('storage-bar-fill');
-const dvrViewPills = document.querySelectorAll('#dvr-view-pills .pill');
-const seriesCountPill = document.getElementById('series-count-pill');
-const episodesCountPill = document.getElementById('episodes-count-pill');
-const rulesCountPill = document.getElementById('rules-count-pill');
+const dvrEngineInfo = document.getElementById("dvr-engine-info");
+const dvrNotDetected = document.getElementById("dvr-not-detected");
+const recordingsContainer = document.getElementById("recordings-container");
+const recordingsCountBadge = document.getElementById("recordings-count-badge");
+const btnRefreshRecordings = document.getElementById("btn-refresh-recordings");
+const btnRecheckDvr = document.getElementById("btn-recheck-dvr");
+const dvrStorageBarCard = document.getElementById("dvr-storage-bar-card");
+const storageSpaceText = document.getElementById("storage-space-text");
+const storageBarFill = document.getElementById("storage-bar-fill");
+const dvrViewPills = document.querySelectorAll("#dvr-view-pills .pill");
+const seriesCountPill = document.getElementById("series-count-pill");
+const episodesCountPill = document.getElementById("episodes-count-pill");
+const rulesCountPill = document.getElementById("rules-count-pill");
 
 // System Elements
-const infoModel = document.getElementById('info-model');
-const infoId = document.getElementById('info-id');
-const infoFirmware = document.getElementById('info-firmware');
-const infoTuners = document.getElementById('info-tuners');
-const infoChannels = document.getElementById('info-channels');
-const infoIp = document.getElementById('info-ip');
-const infoActiveClients = document.getElementById('info-active-clients');
-const infoActiveRecordings = document.getElementById('info-active-recordings');
-const infoStorage = document.getElementById('info-storage');
-const infoStorageBarWrap = document.getElementById('info-storage-bar-wrap');
-const infoStorageBarFill = document.getElementById('info-storage-bar-fill');
-const btnRefreshSystemStatus = document.getElementById('btn-refresh-system-status');
-const discoveredDevicesList = document.getElementById('discovered-devices-list');
-const inputCustomIp = document.getElementById('input-custom-ip');
-const btnAddDevice = document.getElementById('btn-add-device');
-const btnRediscover = document.getElementById('btn-rediscover');
-const prefConfirmDelete = document.getElementById('pref-confirm-delete');
+const infoModel = document.getElementById("info-model");
+const infoId = document.getElementById("info-id");
+const infoFirmware = document.getElementById("info-firmware");
+const infoTuners = document.getElementById("info-tuners");
+const infoChannels = document.getElementById("info-channels");
+const infoIp = document.getElementById("info-ip");
+const infoActiveClients = document.getElementById("info-active-clients");
+const infoActiveRecordings = document.getElementById("info-active-recordings");
+const infoStorage = document.getElementById("info-storage");
+const infoStorageBarWrap = document.getElementById("info-storage-bar-wrap");
+const infoStorageBarFill = document.getElementById("info-storage-bar-fill");
+const btnRefreshSystemStatus = document.getElementById(
+  "btn-refresh-system-status",
+);
+const discoveredDevicesList = document.getElementById(
+  "discovered-devices-list",
+);
+const inputCustomIp = document.getElementById("input-custom-ip");
+const btnAddDevice = document.getElementById("btn-add-device");
+const btnRediscover = document.getElementById("btn-rediscover");
+const prefConfirmDelete = document.getElementById("pref-confirm-delete");
 
 // Confirm Delete Modal Elements
-const modalConfirmDelete = document.getElementById('modal-confirm-delete');
-const modalDeleteTitle = document.getElementById('modal-delete-title');
-const confirmDeleteMsg = document.getElementById('confirm-delete-msg');
-const confirmDeleteDontAsk = document.getElementById('confirm-delete-dont-ask');
-const btnCancelDelete = document.getElementById('btn-cancel-delete');
-const btnProceedDelete = document.getElementById('btn-proceed-delete');
-const modalCloseBtn = document.getElementById('modal-close-btn');
+const modalConfirmDelete = document.getElementById("modal-confirm-delete");
+const modalDeleteTitle = document.getElementById("modal-delete-title");
+const confirmDeleteMsg = document.getElementById("confirm-delete-msg");
+const confirmDeleteDontAsk = document.getElementById("confirm-delete-dont-ask");
+const btnCancelDelete = document.getElementById("btn-cancel-delete");
+const btnProceedDelete = document.getElementById("btn-proceed-delete");
+const modalCloseBtn = document.getElementById("modal-close-btn");
 
 /* ==========================================================================
    Initialization
    ========================================================================== */
 
-document.addEventListener('DOMContentLoaded', async () => {
-  setupTheme();
+document.addEventListener("DOMContentLoaded", async () => {
   setupNavigation();
   setupPollingControls();
   setupTunerDetailEvents();
@@ -273,19 +273,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   startPolling();
 
   // Setup Firmware Check button
-  const btnCheckFirmware = document.getElementById('btn-check-firmware');
+  const btnCheckFirmware = document.getElementById("btn-check-firmware");
   if (btnCheckFirmware) {
-    btnCheckFirmware.addEventListener('click', async () => {
-      btnCheckFirmware.textContent = '⏳';
+    btnCheckFirmware.addEventListener("click", async () => {
+      btnCheckFirmware.textContent = "⏳";
       await loadDeviceDetails();
-      setTimeout(() => (btnCheckFirmware.textContent = '🔄 Check'), 600);
+      setTimeout(() => (btnCheckFirmware.textContent = "🔄 Check"), 600);
     });
   }
 
   // Setup Station Database Update button
-  const btnUpdateStations = document.getElementById('btn-update-stations');
+  const btnUpdateStations = document.getElementById("btn-update-stations");
   if (btnUpdateStations) {
-    btnUpdateStations.addEventListener('click', () => {
+    btnUpdateStations.addEventListener("click", () => {
       updateStationDatabaseFromWebsite(true);
     });
   }
@@ -304,15 +304,20 @@ async function loadStationDatabase() {
     if (cachedJson) {
       try {
         const cached = JSON.parse(cachedJson);
-        if (cached && typeof cached === 'object' && Object.keys(cached).length > 0) {
+        if (
+          cached &&
+          typeof cached === "object" &&
+          Object.keys(cached).length > 0
+        ) {
           state.stationMap = cached;
           loadedFromCache = true;
           updateStationSyncStatus();
           if (state.lineup && state.lineup.length > 0) renderLineup();
-          if (state.tuners && state.tuners.length > 0) renderTuners(state.tuners);
+          if (state.tuners && state.tuners.length > 0)
+            renderTuners(state.tuners);
         }
       } catch (e) {
-        console.warn('Error parsing cached station database:', e);
+        console.warn("Error parsing cached station database:", e);
       }
     }
   }
@@ -320,7 +325,7 @@ async function loadStationDatabase() {
   // 2. If no valid cache exists or app version upgraded, load bundled stations.json immediately
   if (!loadedFromCache) {
     try {
-      const res = await fetch('./stations.json');
+      const res = await fetch("./stations.json");
       if (res.ok) {
         const data = await res.json();
         state.stationMap = data;
@@ -333,12 +338,15 @@ async function loadStationDatabase() {
         return;
       }
     } catch (err) {
-      console.warn('Could not load bundled station database:', err);
+      console.warn("Could not load bundled station database:", err);
     }
   }
 
   // 3. Check if weekly background refresh is due
-  const lastSync = parseInt(localStorage.getItem(STORAGE_STATIONS_LAST_SYNC) || '0', 10);
+  const lastSync = parseInt(
+    localStorage.getItem(STORAGE_STATIONS_LAST_SYNC) || "0",
+    10,
+  );
   const isDue = Date.now() - lastSync >= STATIONS_SYNC_INTERVAL_MS;
 
   if (isDue && navigator.onLine) {
@@ -350,18 +358,24 @@ async function loadStationDatabase() {
 }
 
 async function updateStationDatabaseFromWebsite(force = false) {
-  const btnUpdateStations = document.getElementById('btn-update-stations');
+  const btnUpdateStations = document.getElementById("btn-update-stations");
   if (btnUpdateStations && force) {
     btnUpdateStations.disabled = true;
-    btnUpdateStations.textContent = '⏳';
+    btnUpdateStations.textContent = "⏳";
   }
 
   try {
-    const res = await fetch(`./stations.json?_t=${Date.now()}`, { cache: 'no-cache' });
+    const res = await fetch(`./stations.json?_t=${Date.now()}`, {
+      cache: "no-cache",
+    });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const freshData = await res.json();
 
-    if (freshData && typeof freshData === 'object' && Object.keys(freshData).length > 0) {
+    if (
+      freshData &&
+      typeof freshData === "object" &&
+      Object.keys(freshData).length > 0
+    ) {
       const newCount = Object.keys(freshData).length;
 
       state.stationMap = freshData;
@@ -375,30 +389,35 @@ async function updateStationDatabaseFromWebsite(force = false) {
       if (state.tuners && state.tuners.length > 0) renderTuners(state.tuners);
 
       if (force) {
-        showToast(`Station database updated (${newCount.toLocaleString()} stations)`);
+        showToast(
+          `Station database updated (${newCount.toLocaleString()} stations)`,
+        );
       }
       return true;
     }
   } catch (err) {
-    console.warn('Could not update station database from website:', err);
+    console.warn("Could not update station database from website:", err);
     if (force) {
-      showAlert(`Failed to update station database: ${err.message}`, 'error');
+      showAlert(`Failed to update station database: ${err.message}`, "error");
     }
     return false;
   } finally {
     if (btnUpdateStations) {
       btnUpdateStations.disabled = false;
-      btnUpdateStations.textContent = '🔄 Update';
+      btnUpdateStations.textContent = "🔄 Update";
     }
   }
 }
 
 function updateStationSyncStatus() {
-  const infoStationsStatus = document.getElementById('info-stations-status');
+  const infoStationsStatus = document.getElementById("info-stations-status");
   if (!infoStationsStatus) return;
 
   const count = state.stationMap ? Object.keys(state.stationMap).length : 0;
-  const lastSync = parseInt(localStorage.getItem(STORAGE_STATIONS_LAST_SYNC) || '0', 10);
+  const lastSync = parseInt(
+    localStorage.getItem(STORAGE_STATIONS_LAST_SYNC) || "0",
+    10,
+  );
 
   if (!lastSync) {
     infoStationsStatus.textContent = `${count.toLocaleString()} stations`;
@@ -407,8 +426,8 @@ function updateStationSyncStatus() {
 
   const diffMs = Date.now() - lastSync;
   const diffDays = Math.floor(diffMs / (24 * 60 * 60 * 1000));
-  let timeStr = 'today';
-  if (diffDays === 1) timeStr = 'yesterday';
+  let timeStr = "today";
+  if (diffDays === 1) timeStr = "yesterday";
   else if (diffDays > 1) timeStr = `${diffDays}d ago`;
 
   infoStationsStatus.textContent = `${count.toLocaleString()} stations • Synced ${timeStr}`;
@@ -416,7 +435,10 @@ function updateStationSyncStatus() {
 
 function getStationInfo(guideName) {
   if (!guideName || !state.stationMap) return null;
-  const base = guideName.toUpperCase().replace(/[\.\-_]?(HD|DT\d*|TV|CD|LD|SD|\d+)$/i, '').trim();
+  const base = guideName
+    .toUpperCase()
+    .replace(/[\.\-_]?(HD|DT\d*|TV|CD|LD|SD|\d+)$/i, "")
+    .trim();
   const data = state.stationMap[base];
   if (!data) return null;
   const [locality, network] = data;
@@ -429,85 +451,50 @@ function getStationInfo(guideName) {
 }
 
 /* ==========================================================================
-   Theme Management
-   ========================================================================== */
-
-function setupTheme() {
-  const savedTheme = localStorage.getItem(STORAGE_THEME) || 'dark';
-  applyTheme(savedTheme);
-
-  if (themeSelect) {
-    themeSelect.addEventListener('change', (e) => {
-      applyTheme(e.target.value);
-    });
-  }
-
-  if (prefThemeSelect) {
-    prefThemeSelect.addEventListener('change', (e) => {
-      applyTheme(e.target.value);
-    });
-  }
-}
-
-function applyTheme(theme) {
-  document.documentElement.setAttribute('data-theme', theme);
-  localStorage.setItem(STORAGE_THEME, theme);
-
-  if (themeSelect && themeSelect.value !== theme) {
-    themeSelect.value = theme;
-  }
-
-  if (prefThemeSelect && prefThemeSelect.value !== theme) {
-    prefThemeSelect.value = theme;
-  }
-
-  const metaThemeColor = document.querySelector('meta[name="theme-color"]');
-  if (metaThemeColor) {
-    const themeColors = {
-      dark: '#0b1120',
-      light: '#f1f5f9',
-      oled: '#000000',
-      teal: '#041b1d',
-      nord: '#242933',
-    };
-    metaThemeColor.setAttribute('content', themeColors[theme] || '#0b1120');
-  }
-}
-
-/* ==========================================================================
    Navigation & Tabs
    ========================================================================== */
 
 function setupNavigation() {
   navTabs.forEach((tab) => {
-    tab.addEventListener('click', () => {
-      const targetTab = tab.getAttribute('data-tab');
+    tab.addEventListener("click", () => {
+      const targetTab = tab.getAttribute("data-tab");
       switchTab(targetTab);
     });
   });
 
   function handleHashNavigation() {
-    const rawHash = window.location.hash.replace('#', '');
+    const rawHash = window.location.hash.replace("#", "");
     if (!rawHash) return;
 
-    const [tabPart, queryPart] = rawHash.split('?');
-    const targetTab = (tabPart === 'channels' ? 'lineup' : tabPart).toLowerCase();
+    const [tabPart, queryPart] = rawHash.split("?");
+    const targetTab = (
+      tabPart === "channels" ? "lineup" : tabPart
+    ).toLowerCase();
 
-    if (['tuners', 'lineup', 'recordings', 'system'].includes(targetTab)) {
+    if (["tuners", "lineup", "recordings", "system"].includes(targetTab)) {
       if (state.activeTab !== targetTab) {
         switchTab(targetTab, false);
       }
-      if (targetTab === 'recordings') {
-        if (state.activePlaybacks && state.activePlaybacks.length > 0 && state.dvrSubView !== 'episodes') {
+      if (targetTab === "recordings") {
+        if (
+          state.activePlaybacks &&
+          state.activePlaybacks.length > 0 &&
+          state.dvrSubView !== "episodes"
+        ) {
           state.selectedSeriesId = null;
-          state.dvrSubView = 'episodes';
-          dvrViewPills.forEach((p) => p.classList.toggle('active', p.getAttribute('data-dvr-view') === 'episodes'));
+          state.dvrSubView = "episodes";
+          dvrViewPills.forEach((p) =>
+            p.classList.toggle(
+              "active",
+              p.getAttribute("data-dvr-view") === "episodes",
+            ),
+          );
           renderCurrentDvrSubView();
         }
       }
-      if (targetTab === 'tuners') {
-        const params = new URLSearchParams(queryPart || '');
-        const tunerId = params.get('tuner');
+      if (targetTab === "tuners") {
+        const params = new URLSearchParams(queryPart || "");
+        const tunerId = params.get("tuner");
         if (tunerId) {
           openTunerDetail(tunerId, false);
         } else if (state.selectedTuner) {
@@ -517,16 +504,21 @@ function setupNavigation() {
     }
   }
 
-  window.addEventListener('hashchange', handleHashNavigation);
+  window.addEventListener("hashchange", handleHashNavigation);
 
   if (infoActiveClients) {
-    infoActiveClients.addEventListener('click', (e) => {
+    infoActiveClients.addEventListener("click", (e) => {
       const pbLink = e.target.closest('a[href="#recordings"]');
       if (pbLink) {
-        if (state.dvrSubView !== 'episodes') {
+        if (state.dvrSubView !== "episodes") {
           state.selectedSeriesId = null;
-          state.dvrSubView = 'episodes';
-          dvrViewPills.forEach((p) => p.classList.toggle('active', p.getAttribute('data-dvr-view') === 'episodes'));
+          state.dvrSubView = "episodes";
+          dvrViewPills.forEach((p) =>
+            p.classList.toggle(
+              "active",
+              p.getAttribute("data-dvr-view") === "episodes",
+            ),
+          );
           renderCurrentDvrSubView();
         }
       }
@@ -534,25 +526,33 @@ function setupNavigation() {
   }
 
   // Read initial active tab from URL hash or localStorage
-  const rawInitialHash = window.location.hash.replace('#', '');
-  const [initTabPart, initQueryPart] = rawInitialHash.split('?');
+  const rawInitialHash = window.location.hash.replace("#", "");
+  const [initTabPart, initQueryPart] = rawInitialHash.split("?");
   const savedTab = localStorage.getItem(STORAGE_ACTIVE_TAB);
-  const initialTarget = (initTabPart === 'channels' ? 'lineup' : initTabPart).toLowerCase() || savedTab;
+  const initialTarget =
+    (initTabPart === "channels" ? "lineup" : initTabPart).toLowerCase() ||
+    savedTab;
 
-  if (initialTarget && ['tuners', 'lineup', 'recordings', 'system'].includes(initialTarget)) {
+  if (
+    initialTarget &&
+    ["tuners", "lineup", "recordings", "system"].includes(initialTarget)
+  ) {
     state.activeTab = initialTarget;
     navTabs.forEach((tab) => {
-      tab.classList.toggle('active', tab.getAttribute('data-tab') === initialTarget);
+      tab.classList.toggle(
+        "active",
+        tab.getAttribute("data-tab") === initialTarget,
+      );
     });
     tabViews.forEach((view) => {
-      view.classList.toggle('active', view.id === `view-${initialTarget}`);
+      view.classList.toggle("active", view.id === `view-${initialTarget}`);
     });
     if (!window.location.hash) {
-      const hashName = initialTarget === 'lineup' ? 'channels' : initialTarget;
-      history.replaceState(null, '', `#${hashName}`);
-    } else if (initialTarget === 'tuners') {
-      const params = new URLSearchParams(initQueryPart || '');
-      const tunerId = params.get('tuner');
+      const hashName = initialTarget === "lineup" ? "channels" : initialTarget;
+      history.replaceState(null, "", `#${hashName}`);
+    } else if (initialTarget === "tuners") {
+      const params = new URLSearchParams(initQueryPart || "");
+      const tunerId = params.get("tuner");
       if (tunerId) {
         openTunerDetail(tunerId, false);
       }
@@ -561,32 +561,32 @@ function setupNavigation() {
 }
 
 function switchTab(tabId, updateHash = true) {
-  if (tabId === 'channels') tabId = 'lineup';
+  if (tabId === "channels") tabId = "lineup";
   state.activeTab = tabId;
   localStorage.setItem(STORAGE_ACTIVE_TAB, tabId);
 
   // Stop tuner detail polling if switching away from tuners
-  if (tabId !== 'tuners') {
+  if (tabId !== "tuners") {
     stopTunerDetailPolling();
   } else if (state.selectedTuner && !state.isGraphPaused) {
     startTunerDetailPolling();
   }
 
   navTabs.forEach((tab) => {
-    tab.classList.toggle('active', tab.getAttribute('data-tab') === tabId);
+    tab.classList.toggle("active", tab.getAttribute("data-tab") === tabId);
   });
 
   tabViews.forEach((view) => {
-    view.classList.toggle('active', view.id === `view-${tabId}`);
+    view.classList.toggle("active", view.id === `view-${tabId}`);
   });
 
   if (updateHash) {
-    let hash = tabId === 'lineup' ? 'channels' : tabId;
-    if (tabId === 'tuners' && state.selectedTuner) {
+    let hash = tabId === "lineup" ? "channels" : tabId;
+    if (tabId === "tuners" && state.selectedTuner) {
       hash = `tuners?tuner=${state.selectedTuner}`;
     }
     if (window.location.hash !== `#${hash}`) {
-      history.replaceState(null, '', `#${hash}`);
+      history.replaceState(null, "", `#${hash}`);
     }
   }
 
@@ -596,20 +596,25 @@ function switchTab(tabId, updateHash = true) {
 
 async function refreshActiveTab() {
   switch (state.activeTab) {
-    case 'tuners':
+    case "tuners":
       await fetchTuners();
       break;
-    case 'lineup':
+    case "lineup":
       if (state.deviceInfo?.StorageID && !state.deviceInfo?.TunerCount) {
         state.lineup = [];
-        if (lineupCountBadge) lineupCountBadge.classList.add('hidden');
+        if (lineupCountBadge) lineupCountBadge.classList.add("hidden");
         renderLineup();
-      } else if (state.lineup.length === 0 || !state.lineup.some((ch) => ch.Frequency)) {
+      } else if (
+        state.lineup.length === 0 ||
+        !state.lineup.some((ch) => ch.Frequency)
+      ) {
         await fetchLineup();
       } else {
         updateLineupStats();
         try {
-          const statusRes = await fetch(`http://${state.currentIp}/status.json`);
+          const statusRes = await fetch(
+            `http://${state.currentIp}/status.json`,
+          );
           if (statusRes.ok) {
             const statusItems = await statusRes.json();
             if (Array.isArray(statusItems)) state.tuners = statusItems;
@@ -618,10 +623,10 @@ async function refreshActiveTab() {
         renderLineup();
       }
       break;
-    case 'recordings':
+    case "recordings":
       await fetchRecordings();
       break;
-    case 'system':
+    case "system":
       await loadDeviceDetails();
       break;
   }
@@ -632,27 +637,30 @@ async function refreshActiveTab() {
    ========================================================================== */
 
 function renderDeviceDropdown() {
-  deviceSelect.innerHTML = '';
+  deviceSelect.innerHTML = "";
 
   const validIps = [
     ...(state.currentIp ? [state.currentIp] : []),
-    ...state.devices.map((d) => d.ip || d.LocalIP).filter(Boolean)
+    ...state.devices.map((d) => d.ip || d.LocalIP).filter(Boolean),
   ];
   const allIps = Array.from(new Set(validIps));
 
   if (allIps.length === 0) {
-    const opt = document.createElement('option');
-    opt.value = '';
-    opt.textContent = 'No Device Connected';
+    const opt = document.createElement("option");
+    opt.value = "";
+    opt.textContent = "No Device Connected";
     deviceSelect.appendChild(opt);
     return;
   }
 
   allIps.forEach((ip) => {
     const dev = state.devices.find((d) => (d.ip || d.LocalIP) === ip);
-    const model = dev?.ModelNumber || dev?.FriendlyName || (dev?.StorageID ? 'HDHomeRun RECORD' : 'HDHomeRun');
+    const model =
+      dev?.ModelNumber ||
+      dev?.FriendlyName ||
+      (dev?.StorageID ? "HDHomeRun RECORD" : "HDHomeRun");
     const label = `${model} (${ip})`;
-    const opt = document.createElement('option');
+    const opt = document.createElement("option");
     opt.value = ip;
     opt.textContent = label;
     if (ip === state.currentIp) opt.selected = true;
@@ -681,21 +689,21 @@ async function switchDevice(newIp) {
 
   // 2. Reset / hide tab badges while switching
   if (recordingsCountBadge) {
-    recordingsCountBadge.classList.add('hidden');
-    recordingsCountBadge.textContent = '0';
+    recordingsCountBadge.classList.add("hidden");
+    recordingsCountBadge.textContent = "0";
   }
   if (lineupCountBadge) {
-    lineupCountBadge.classList.add('hidden');
-    lineupCountBadge.textContent = '0';
+    lineupCountBadge.classList.add("hidden");
+    lineupCountBadge.textContent = "0";
   }
   if (tunerSummaryBadge) {
-    tunerSummaryBadge.textContent = 'Updating...';
-    tunerSummaryBadge.className = 'badge';
+    tunerSummaryBadge.textContent = "Updating...";
+    tunerSummaryBadge.className = "badge";
   }
 
   hideAlert();
-  const noticeEl = document.getElementById('no-device-notice');
-  if (noticeEl) noticeEl.classList.add('hidden');
+  const noticeEl = document.getElementById("no-device-notice");
+  if (noticeEl) noticeEl.classList.add("hidden");
 
   // 3. Update device selectors immediately
   renderDeviceDropdown();
@@ -711,16 +719,16 @@ async function switchDevice(newIp) {
   if (connected) {
     // 5. Always fetch DVR recordings to update recording count badge and library immediately
     if (state.hasDvr) {
-      await fetchRecordings(state.activeTab !== 'recordings');
+      await fetchRecordings(state.activeTab !== "recordings");
     } else {
-      if (recordingsCountBadge) recordingsCountBadge.classList.add('hidden');
-      if (dvrNotDetected) dvrNotDetected.classList.remove('hidden');
-      if (recordingsContainer) recordingsContainer.innerHTML = '';
-      if (dvrStorageBarCard) dvrStorageBarCard.classList.add('hidden');
+      if (recordingsCountBadge) recordingsCountBadge.classList.add("hidden");
+      if (dvrNotDetected) dvrNotDetected.classList.remove("hidden");
+      if (recordingsContainer) recordingsContainer.innerHTML = "";
+      if (dvrStorageBarCard) dvrStorageBarCard.classList.add("hidden");
     }
 
     // 6. Refresh current active tab view if not system (since loadDeviceDetails already populated system)
-    if (state.activeTab !== 'system') {
+    if (state.activeTab !== "system") {
       await refreshActiveTab();
     }
   } else {
@@ -730,34 +738,34 @@ async function switchDevice(newIp) {
 
 async function loadDeviceDetails() {
   const ip = state.currentIp;
-  const labelInfoIp = document.getElementById('label-info-ip');
+  const labelInfoIp = document.getElementById("label-info-ip");
   if (!ip) {
-    connectionDot.className = 'status-dot disconnected';
-    infoModel.textContent = '—';
-    infoId.textContent = '—';
-    infoFirmware.textContent = '—';
-    infoTuners.textContent = '—';
-    infoIp.textContent = '—';
-    const labelInfoId = document.getElementById('label-info-id');
-    if (labelInfoId) labelInfoId.textContent = 'Device ID';
-    const labelInfoFirmware = document.getElementById('label-info-firmware');
-    if (labelInfoFirmware) labelInfoFirmware.textContent = 'Firmware';
-    const infoTunersLink = document.getElementById('info-tuners-link');
+    connectionDot.className = "status-dot disconnected";
+    infoModel.textContent = "—";
+    infoId.textContent = "—";
+    infoFirmware.textContent = "—";
+    infoTuners.textContent = "—";
+    infoIp.textContent = "—";
+    const labelInfoId = document.getElementById("label-info-id");
+    if (labelInfoId) labelInfoId.textContent = "Device ID";
+    const labelInfoFirmware = document.getElementById("label-info-firmware");
+    if (labelInfoFirmware) labelInfoFirmware.textContent = "Firmware";
+    const infoTunersLink = document.getElementById("info-tuners-link");
     if (infoTunersLink) {
-      infoTunersLink.classList.remove('disabled');
-      infoTunersLink.setAttribute('href', '#tuners');
+      infoTunersLink.classList.remove("disabled");
+      infoTunersLink.setAttribute("href", "#tuners");
     }
-    const infoChannelsLink = document.getElementById('info-channels-link');
+    const infoChannelsLink = document.getElementById("info-channels-link");
     if (infoChannelsLink) {
-      infoChannelsLink.classList.remove('disabled');
-      infoChannelsLink.setAttribute('href', '#channels');
+      infoChannelsLink.classList.remove("disabled");
+      infoChannelsLink.setAttribute("href", "#channels");
     }
-    if (labelInfoIp) labelInfoIp.textContent = 'Hostname / IP';
-    if (infoActiveClients) infoActiveClients.textContent = '—';
-    if (infoActiveRecordings) infoActiveRecordings.textContent = '—';
-    if (infoStorage) infoStorage.textContent = '—';
-    if (infoStorageBarWrap) infoStorageBarWrap.classList.add('hidden');
-    if (infoChannels) infoChannels.textContent = '—';
+    if (labelInfoIp) labelInfoIp.textContent = "Hostname / IP";
+    if (infoActiveClients) infoActiveClients.textContent = "—";
+    if (infoActiveRecordings) infoActiveRecordings.textContent = "—";
+    if (infoStorage) infoStorage.textContent = "—";
+    if (infoStorageBarWrap) infoStorageBarWrap.classList.add("hidden");
+    if (infoChannels) infoChannels.textContent = "—";
     return false;
   }
 
@@ -766,44 +774,53 @@ async function loadDeviceDetails() {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     state.deviceInfo = data;
-    connectionDot.className = 'status-dot connected';
+    connectionDot.className = "status-dot connected";
 
     const isRecordEngine = Boolean(data.StorageID && !data.TunerCount);
 
     // Populate System view
-    infoModel.textContent = data.ModelNumber || data.FriendlyName || (isRecordEngine ? 'HDHomeRun RECORD' : 'Unknown Model');
+    infoModel.textContent =
+      data.ModelNumber ||
+      data.FriendlyName ||
+      (isRecordEngine ? "HDHomeRun RECORD" : "Unknown Model");
 
-    const labelInfoId = document.getElementById('label-info-id');
+    const labelInfoId = document.getElementById("label-info-id");
     if (labelInfoId) {
-      labelInfoId.textContent = isRecordEngine ? 'Storage ID' : 'Device ID';
+      labelInfoId.textContent = isRecordEngine ? "Storage ID" : "Device ID";
     }
-    infoId.textContent = data.DeviceID || data.StorageID || '—';
+    infoId.textContent = data.DeviceID || data.StorageID || "—";
 
-    const labelInfoFirmware = document.getElementById('label-info-firmware');
+    const labelInfoFirmware = document.getElementById("label-info-firmware");
     if (labelInfoFirmware) {
-      labelInfoFirmware.textContent = isRecordEngine ? 'Software Version' : 'Firmware';
+      labelInfoFirmware.textContent = isRecordEngine
+        ? "Software Version"
+        : "Firmware";
     }
-    infoFirmware.textContent = data.FirmwareVersion || data.FirmwareName || data.Version || '—';
+    infoFirmware.textContent =
+      data.FirmwareVersion || data.FirmwareName || data.Version || "—";
 
-    const infoTunersLink = document.getElementById('info-tuners-link');
+    const infoTunersLink = document.getElementById("info-tuners-link");
     if (isRecordEngine) {
-      infoTuners.textContent = 'None (Storage Engine)';
+      infoTuners.textContent = "None (Storage Engine)";
       if (infoTunersLink) {
-        infoTunersLink.classList.add('disabled');
-        infoTunersLink.removeAttribute('href');
+        infoTunersLink.classList.add("disabled");
+        infoTunersLink.removeAttribute("href");
       }
     } else {
-      infoTuners.textContent = data.TunerCount ? `${data.TunerCount} Tuners` : '—';
+      infoTuners.textContent = data.TunerCount
+        ? `${data.TunerCount} Tuners`
+        : "—";
       if (infoTunersLink) {
-        infoTunersLink.classList.remove('disabled');
-        infoTunersLink.setAttribute('href', '#tuners');
+        infoTunersLink.classList.remove("disabled");
+        infoTunersLink.setAttribute("href", "#tuners");
       }
     }
 
     infoIp.textContent = ip;
     if (labelInfoIp) {
-      const isIp = /^(\d{1,3}\.){3}\d{1,3}(:\d+)?$/.test(ip) || ip.includes(':');
-      labelInfoIp.textContent = isIp ? 'IP Address' : 'Hostname';
+      const isIp =
+        /^(\d{1,3}\.){3}\d{1,3}(:\d+)?$/.test(ip) || ip.includes(":");
+      labelInfoIp.textContent = isIp ? "IP Address" : "Hostname";
     }
 
     // Check for DVR / Storage engine in discover.json
@@ -832,22 +849,22 @@ async function loadDeviceDetails() {
 
     if (isRecordEngine) {
       state.lineup = [];
-      const infoChannelsLink = document.getElementById('info-channels-link');
+      const infoChannelsLink = document.getElementById("info-channels-link");
       if (infoChannelsLink) {
-        infoChannelsLink.classList.add('disabled');
-        infoChannelsLink.removeAttribute('href');
+        infoChannelsLink.classList.add("disabled");
+        infoChannelsLink.removeAttribute("href");
       }
       if (infoChannels) {
-        infoChannels.textContent = 'None (Storage Engine)';
+        infoChannels.textContent = "None (Storage Engine)";
       }
       if (lineupCountBadge) {
-        lineupCountBadge.classList.add('hidden');
+        lineupCountBadge.classList.add("hidden");
       }
     } else {
-      const infoChannelsLink = document.getElementById('info-channels-link');
+      const infoChannelsLink = document.getElementById("info-channels-link");
       if (infoChannelsLink) {
-        infoChannelsLink.classList.remove('disabled');
-        infoChannelsLink.setAttribute('href', '#channels');
+        infoChannelsLink.classList.remove("disabled");
+        infoChannelsLink.setAttribute("href", "#channels");
       }
       await loadChannelsCount();
     }
@@ -856,52 +873,67 @@ async function loadDeviceDetails() {
     checkFirmwareUpdate(data);
     return true;
   } catch (err) {
-    console.warn('Could not load discover.json:', err);
-    connectionDot.className = 'status-dot error';
-    showAlert(`Unable to connect to HDHomeRun at <code>${ip}</code>. Check your network or permissions.`, 'error');
+    console.warn("Could not load discover.json:", err);
+    connectionDot.className = "status-dot error";
+    showAlert(
+      `Unable to connect to HDHomeRun at <code>${ip}</code>. Check your network or permissions.`,
+      "error",
+    );
     return false;
   }
 }
 
 async function checkFirmwareUpdate(deviceData) {
-  const badge = document.getElementById('firmware-status-badge');
-  const btnCheck = document.getElementById('btn-check-firmware');
+  const badge = document.getElementById("firmware-status-badge");
+  const btnCheck = document.getElementById("btn-check-firmware");
   if (!badge) return;
 
-  const isRecordEngine = Boolean(deviceData?.StorageID && !deviceData?.TunerCount);
+  const isRecordEngine = Boolean(
+    deviceData?.StorageID && !deviceData?.TunerCount,
+  );
   if (isRecordEngine) {
-    badge.className = 'badge badge-hd';
-    badge.textContent = 'Record Engine';
-    badge.title = `HDHomeRun RECORD software version ${deviceData?.Version || ''}`;
-    if (btnCheck) btnCheck.classList.add('hidden');
+    badge.className = "badge badge-hd";
+    badge.textContent = "Record Engine";
+    badge.title = `HDHomeRun RECORD software version ${deviceData?.Version || ""}`;
+    if (btnCheck) btnCheck.classList.add("hidden");
     return;
   }
 
-  if (btnCheck) btnCheck.classList.remove('hidden');
-  badge.className = 'badge';
-  badge.textContent = 'Checking...';
+  if (btnCheck) btnCheck.classList.remove("hidden");
+  badge.className = "badge";
+  badge.textContent = "Checking...";
 
-  const currentVersion = deviceData?.FirmwareVersion || state.deviceInfo?.FirmwareVersion;
+  const currentVersion =
+    deviceData?.FirmwareVersion || state.deviceInfo?.FirmwareVersion;
 
   // Check local discover.json for UpgradeURL or UpgradeAvailable
-  const upgradeAvailable = !!(deviceData?.UpgradeURL || deviceData?.UpgradeAvailable);
-  const upgradeVersion = deviceData?.UpgradeAvailable || '';
+  const upgradeAvailable = !!(
+    deviceData?.UpgradeURL || deviceData?.UpgradeAvailable
+  );
+  const upgradeVersion = deviceData?.UpgradeAvailable || "";
 
   if (upgradeAvailable) {
-    badge.className = 'badge badge-update-available';
-    badge.textContent = upgradeVersion ? `Update: v${upgradeVersion}` : 'Update Available';
-    badge.title = 'A newer firmware is available. Click Open Device Web Admin to install.';
+    badge.className = "badge badge-update-available";
+    badge.textContent = upgradeVersion
+      ? `Update: v${upgradeVersion}`
+      : "Update Available";
+    badge.title =
+      "A newer firmware is available. Click Open Device Web Admin to install.";
   } else {
-    badge.className = 'badge badge-up-to-date';
-    badge.textContent = '✓ Up to date';
-    badge.title = `Firmware ${currentVersion || ''} is up to date`;
+    badge.className = "badge badge-up-to-date";
+    badge.textContent = "✓ Up to date";
+    badge.title = `Firmware ${currentVersion || ""} is up to date`;
   }
 }
 
 function isEpisodeMatchingPlayback(ep, playbackSession) {
-  if (!playbackSession || !playbackSession.name || !ep || !ep.Title) return false;
+  if (!playbackSession || !playbackSession.name || !ep || !ep.Title)
+    return false;
 
-  const clean = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  const clean = (s) =>
+    String(s || "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, "");
   const cleanPb = clean(playbackSession.name);
   const cleanTitle = clean(ep.Title);
 
@@ -941,24 +973,26 @@ function isEpisodeMatchingPlayback(ep, playbackSession) {
 
     // UTC
     const uY = d.getUTCFullYear();
-    const uM = String(d.getUTCMonth() + 1).padStart(2, '0');
-    const uD = String(d.getUTCDate()).padStart(2, '0');
-    const uH = String(d.getUTCHours()).padStart(2, '0');
-    const uMin = String(d.getUTCMinutes()).padStart(2, '0');
+    const uM = String(d.getUTCMonth() + 1).padStart(2, "0");
+    const uD = String(d.getUTCDate()).padStart(2, "0");
+    const uH = String(d.getUTCHours()).padStart(2, "0");
+    const uMin = String(d.getUTCMinutes()).padStart(2, "0");
     dates.push(`${uY}${uM}${uD}`);
     timeStamps.push(`${uY}${uM}${uD}-${uH}${uMin}`);
 
     // Local
     const lY = d.getFullYear();
-    const lM = String(d.getMonth() + 1).padStart(2, '0');
-    const lD = String(d.getDate()).padStart(2, '0');
-    const lH = String(d.getHours()).padStart(2, '0');
-    const lMin = String(d.getMinutes()).padStart(2, '0');
+    const lM = String(d.getMonth() + 1).padStart(2, "0");
+    const lD = String(d.getDate()).padStart(2, "0");
+    const lH = String(d.getHours()).padStart(2, "0");
+    const lMin = String(d.getMinutes()).padStart(2, "0");
     dates.push(`${lY}${lM}${lD}`);
     timeStamps.push(`${lY}${lM}${lD}-${lH}${lMin}`);
   });
 
-  const hasTimeStampMatch = timeStamps.some((ts) => cleanPb.includes(clean(ts)));
+  const hasTimeStampMatch = timeStamps.some((ts) =>
+    cleanPb.includes(clean(ts)),
+  );
   if (hasTimeStampMatch) {
     return true;
   }
@@ -970,7 +1004,9 @@ function isEpisodeMatchingPlayback(ep, playbackSession) {
       return true;
     }
     // If cleanEpTitle didn't match, check if another episode of this series actually matches cleanPb's title
-    const otherEpsWithSameTitle = (state.episodes || []).filter((e) => e !== ep && clean(e.Title) === cleanTitle);
+    const otherEpsWithSameTitle = (state.episodes || []).filter(
+      (e) => e !== ep && clean(e.Title) === cleanTitle,
+    );
     const anotherEpMatchesTitle = otherEpsWithSameTitle.some((other) => {
       const oEpTitle = clean(other.EpisodeTitle);
       return oEpTitle && cleanPb.includes(oEpTitle);
@@ -984,7 +1020,9 @@ function isEpisodeMatchingPlayback(ep, playbackSession) {
   // 4. If there is NO EpisodeNumber, NO EpisodeTitle, and NO Date available on this episode
   if (!cleanEpNum && !cleanEpTitle && dates.length === 0) {
     // Only match if this is the only recording for this series title
-    const sameTitleEps = (state.episodes || []).filter((e) => clean(e.Title) === cleanTitle);
+    const sameTitleEps = (state.episodes || []).filter(
+      (e) => clean(e.Title) === cleanTitle,
+    );
     if (sameTitleEps.length === 1) {
       return true;
     }
@@ -998,11 +1036,12 @@ function parseDeviceStatus(statusItems, ip) {
     return { activeClients: [], activeRecordings: [], activePlaybacks: [] };
   }
 
-  const physicalTuners = statusItems.filter((item) =>
-    item.Resource && item.Resource.toLowerCase().startsWith('tuner')
+  const physicalTuners = statusItems.filter(
+    (item) => item.Resource && item.Resource.toLowerCase().startsWith("tuner"),
   );
-  const liveSessions = statusItems.filter((item) =>
-    !item.Resource || !item.Resource.toLowerCase().startsWith('tuner')
+  const liveSessions = statusItems.filter(
+    (item) =>
+      !item.Resource || !item.Resource.toLowerCase().startsWith("tuner"),
   );
 
   const activeClients = [];
@@ -1014,18 +1053,18 @@ function parseDeviceStatus(statusItems, ip) {
     const targetIp = tuner.TargetIP;
     const isExternalIp =
       targetIp &&
-      targetIp !== 'none' &&
-      targetIp !== '127.0.0.1' &&
-      targetIp !== '::1' &&
-      targetIp !== '[::1]' &&
+      targetIp !== "none" &&
+      targetIp !== "127.0.0.1" &&
+      targetIp !== "::1" &&
+      targetIp !== "[::1]" &&
       targetIp !== ip;
 
     const hasChannel = Boolean(tuner.VctNumber || tuner.VctName);
 
     if (hasChannel && isExternalIp) {
       const chLabel = tuner.VctNumber
-        ? `Ch ${tuner.VctNumber}${tuner.VctName ? ' ' + tuner.VctName : ''}`
-        : (tuner.VctName || tuner.Resource);
+        ? `Ch ${tuner.VctNumber}${tuner.VctName ? " " + tuner.VctName : ""}`
+        : tuner.VctName || tuner.Resource;
 
       activeClients.push({
         ip: targetIp,
@@ -1038,44 +1077,71 @@ function parseDeviceStatus(statusItems, ip) {
   const nowSec = Math.floor(Date.now() / 1000);
 
   // Helper to format clean recording title & channel
-  const formatRecordingEntry = (rawTitle, vctNum, vctName, targetIp, matchedEp) => {
-    let showTitle = '';
-    let epDetail = '';
+  const formatRecordingEntry = (
+    rawTitle,
+    vctNum,
+    vctName,
+    targetIp,
+    matchedEp,
+  ) => {
+    let showTitle = "";
+    let epDetail = "";
 
     if (matchedEp) {
-      showTitle = matchedEp.Title || '';
+      showTitle = matchedEp.Title || "";
       if (matchedEp.EpisodeTitle) {
-        epDetail = matchedEp.EpisodeNumber ? `${matchedEp.EpisodeNumber}: ${matchedEp.EpisodeTitle}` : matchedEp.EpisodeTitle;
+        epDetail = matchedEp.EpisodeNumber
+          ? `${matchedEp.EpisodeNumber}: ${matchedEp.EpisodeTitle}`
+          : matchedEp.EpisodeTitle;
       } else if (matchedEp.EpisodeNumber) {
         epDetail = matchedEp.EpisodeNumber;
       }
     } else if (rawTitle) {
       // Strip trailing bracketed timestamp like [20260924-1300]
-      showTitle = rawTitle.replace(/\s*\[\d{8}-\d{4}\]$/, '').trim();
+      showTitle = rawTitle.replace(/\s*\[\d{8}-\d{4}\]$/, "").trim();
     }
 
-    const titlePart = showTitle ? (epDetail ? `${showTitle} - ${epDetail}` : showTitle) : 'DVR Recording';
-    const chNum = vctNum || matchedEp?.ChannelNumber || '';
-    const chName = vctName || matchedEp?.ChannelName || '';
-    const chPart = chNum ? (chName ? `Ch ${chNum} ${chName}` : `Ch ${chNum}`) : chName;
+    const titlePart = showTitle
+      ? epDetail
+        ? `${showTitle} - ${epDetail}`
+        : showTitle
+      : "DVR Recording";
+    const chNum = vctNum || matchedEp?.ChannelNumber || "";
+    const chName = vctName || matchedEp?.ChannelName || "";
+    const chPart = chNum
+      ? chName
+        ? `Ch ${chNum} ${chName}`
+        : `Ch ${chNum}`
+      : chName;
     const displayLabel = chPart ? `${titlePart} (${chPart})` : titlePart;
 
     return {
       channel: displayLabel,
-      channelNumber: chNum ? String(chNum) : '',
-      channelName: chName || '',
-      programTitle: showTitle || rawTitle || '',
-      target: targetIp || 'HDHR Storage',
-      episodeId: matchedEp?.CmdURL || matchedEp?.EpisodeNumber || '',
+      channelNumber: chNum ? String(chNum) : "",
+      channelName: chName || "",
+      programTitle: showTitle || rawTitle || "",
+      target: targetIp || "HDHR Storage",
+      episodeId: matchedEp?.CmdURL || matchedEp?.EpisodeNumber || "",
     };
   };
 
   // Helper to find matching episode from state.episodes
   const findMatchingEpisode = (s) => {
-    if (!Array.isArray(state.episodes) || state.episodes.length === 0) return null;
+    if (!Array.isArray(state.episodes) || state.episodes.length === 0)
+      return null;
     return state.episodes.find((ep) => {
-      const chMatch = s.VctNumber && (String(ep.ChannelNumber) === String(s.VctNumber) || (ep.ChannelName && s.VctName && ep.ChannelName.toLowerCase() === s.VctName.toLowerCase()));
-      const timeMatch = ep.StartTime && ep.EndTime && ep.StartTime <= nowSec && ep.EndTime > nowSec && ep.RecordSuccess !== 1;
+      const chMatch =
+        s.VctNumber &&
+        (String(ep.ChannelNumber) === String(s.VctNumber) ||
+          (ep.ChannelName &&
+            s.VctName &&
+            ep.ChannelName.toLowerCase() === s.VctName.toLowerCase()));
+      const timeMatch =
+        ep.StartTime &&
+        ep.EndTime &&
+        ep.StartTime <= nowSec &&
+        ep.EndTime > nowSec &&
+        ep.RecordSuccess !== 1;
       const playbackMatch = isEpisodeMatchingPlayback(ep, s);
       return (timeMatch && (chMatch || playbackMatch)) || playbackMatch;
     });
@@ -1084,20 +1150,36 @@ function parseDeviceStatus(statusItems, ip) {
   // Check liveSessions (sessions from HTTP streaming, DVR record engines, or DVR playback)
   liveSessions.forEach((s) => {
     const isRecord =
-      (s.Resource && s.Resource.toLowerCase().includes('record')) ||
-      (s.Name && (s.Name.toLowerCase().startsWith('record') || s.Name.toLowerCase() === 'record'));
+      (s.Resource && s.Resource.toLowerCase().includes("record")) ||
+      (s.Name &&
+        (s.Name.toLowerCase().startsWith("record") ||
+          s.Name.toLowerCase() === "record"));
     const isPlayback =
-      (s.Resource && s.Resource.toLowerCase().includes('playback')) ||
-      (s.Name && (s.Name.toLowerCase().startsWith('playback') || s.Name.toLowerCase() === 'playback'));
+      (s.Resource && s.Resource.toLowerCase().includes("playback")) ||
+      (s.Name &&
+        (s.Name.toLowerCase().startsWith("playback") ||
+          s.Name.toLowerCase() === "playback"));
 
     if (isRecord) {
       const matchedEp = findMatchingEpisode(s);
-      const entry = formatRecordingEntry(s.Name, s.VctNumber, s.VctName, s.TargetIP, matchedEp);
+      const entry = formatRecordingEntry(
+        s.Name,
+        s.VctNumber,
+        s.VctName,
+        s.TargetIP,
+        matchedEp,
+      );
 
       // Deduplicate: avoid duplicate active recording entries for the same channel, episode, or label
       const alreadyExists = activeRecordings.some((r) => {
-        if (entry.channelNumber && r.channelNumber && entry.channelNumber === r.channelNumber) return true;
-        if (entry.episodeId && r.episodeId && entry.episodeId === r.episodeId) return true;
+        if (
+          entry.channelNumber &&
+          r.channelNumber &&
+          entry.channelNumber === r.channelNumber
+        )
+          return true;
+        if (entry.episodeId && r.episodeId && entry.episodeId === r.episodeId)
+          return true;
         if (entry.channel === r.channel) return true;
         return false;
       });
@@ -1107,37 +1189,44 @@ function parseDeviceStatus(statusItems, ip) {
       }
     } else if (isPlayback) {
       activePlaybacks.push({
-        name: s.Name || 'Recorded Playback',
-        ip: s.TargetIP || 'Client',
+        name: s.Name || "Recorded Playback",
+        ip: s.TargetIP || "Client",
       });
     } else if (
       s.TargetIP &&
-      s.TargetIP !== 'none' &&
+      s.TargetIP !== "none" &&
       s.TargetIP !== ip &&
-      s.TargetIP !== '127.0.0.1' &&
-      s.TargetIP !== '::1' &&
-      s.TargetIP !== '[::1]'
+      s.TargetIP !== "127.0.0.1" &&
+      s.TargetIP !== "::1" &&
+      s.TargetIP !== "[::1]"
     ) {
       // Find matching tuner if available
-      const matchingTuner = physicalTuners.find((t) =>
-        (t.VctNumber && (s.VctNumber === t.VctNumber || (s.Name && s.Name.includes(t.VctNumber)))) ||
-        (t.VctName && (s.VctName === t.VctName || (s.Name && s.Name.includes(t.VctName))))
+      const matchingTuner = physicalTuners.find(
+        (t) =>
+          (t.VctNumber &&
+            (s.VctNumber === t.VctNumber ||
+              (s.Name && s.Name.includes(t.VctNumber)))) ||
+          (t.VctName &&
+            (s.VctName === t.VctName ||
+              (s.Name && s.Name.includes(t.VctName)))),
       );
 
       // Do not duplicate if this exact tuner stream was already counted directly on physicalTuners
-      const isAlreadyCounted = matchingTuner && activeClients.some(
-        (c) => c.tuner === matchingTuner.Resource && c.ip === s.TargetIP
-      );
+      const isAlreadyCounted =
+        matchingTuner &&
+        activeClients.some(
+          (c) => c.tuner === matchingTuner.Resource && c.ip === s.TargetIP,
+        );
 
       if (!isAlreadyCounted) {
-        let chLabel = '';
+        let chLabel = "";
         if (matchingTuner) {
-          chLabel = `Ch ${matchingTuner.VctNumber}${matchingTuner.VctName ? ' ' + matchingTuner.VctName : ''}`;
+          chLabel = `Ch ${matchingTuner.VctNumber}${matchingTuner.VctName ? " " + matchingTuner.VctName : ""}`;
         } else if (s.VctNumber) {
-          chLabel = `Ch ${s.VctNumber}${s.VctName ? ' ' + s.VctName : ''}`;
+          chLabel = `Ch ${s.VctNumber}${s.VctName ? " " + s.VctName : ""}`;
         } else if (s.Name) {
-          chLabel = s.Name.replace(/^Live channel\s+/i, 'Ch ');
-          if (!chLabel.startsWith('Ch ')) chLabel = `Ch ${chLabel}`;
+          chLabel = s.Name.replace(/^Live channel\s+/i, "Ch ");
+          if (!chLabel.startsWith("Ch ")) chLabel = `Ch ${chLabel}`;
         }
         activeClients.push({
           ip: s.TargetIP,
@@ -1151,18 +1240,42 @@ function parseDeviceStatus(statusItems, ip) {
   // Fallback: Check if there are in-progress recordings in state.episodes not already captured by status.json
   if (Array.isArray(state.episodes)) {
     state.episodes.forEach((ep) => {
-      if (ep.StartTime && ep.EndTime && ep.StartTime <= nowSec && ep.EndTime > nowSec && ep.RecordSuccess !== 1) {
-        const epChNum = ep.ChannelNumber ? String(ep.ChannelNumber) : '';
+      if (
+        ep.StartTime &&
+        ep.EndTime &&
+        ep.StartTime <= nowSec &&
+        ep.EndTime > nowSec &&
+        ep.RecordSuccess !== 1
+      ) {
+        const epChNum = ep.ChannelNumber ? String(ep.ChannelNumber) : "";
         const alreadyCounted = activeRecordings.some((r) => {
-          if (r.episodeId && ep.CmdURL && r.episodeId === ep.CmdURL) return true;
-          if (epChNum && r.channelNumber && r.channelNumber === epChNum) return true;
-          if (ep.ChannelName && r.channelName && ep.ChannelName.toLowerCase() === r.channelName.toLowerCase()) return true;
-          if (r.programTitle && ep.Title && isEpisodeMatchingPlayback(ep, { name: r.programTitle })) return true;
+          if (r.episodeId && ep.CmdURL && r.episodeId === ep.CmdURL)
+            return true;
+          if (epChNum && r.channelNumber && r.channelNumber === epChNum)
+            return true;
+          if (
+            ep.ChannelName &&
+            r.channelName &&
+            ep.ChannelName.toLowerCase() === r.channelName.toLowerCase()
+          )
+            return true;
+          if (
+            r.programTitle &&
+            ep.Title &&
+            isEpisodeMatchingPlayback(ep, { name: r.programTitle })
+          )
+            return true;
           return false;
         });
 
         if (!alreadyCounted) {
-          const entry = formatRecordingEntry('', ep.ChannelNumber, ep.ChannelName, 'HDHR Storage', ep);
+          const entry = formatRecordingEntry(
+            "",
+            ep.ChannelNumber,
+            ep.ChannelName,
+            "HDHR Storage",
+            ep,
+          );
           activeRecordings.push(entry);
         }
       }
@@ -1188,25 +1301,29 @@ async function updateSystemLiveStatus() {
         }
       }
     } catch (e) {
-      console.warn('Could not fetch /status.json for system status:', e);
+      console.warn("Could not fetch /status.json for system status:", e);
     }
 
     // 2. Parse active clients, active recordings, and active playbacks
-    const { activeClients, activeRecordings, activePlaybacks } = parseDeviceStatus(statusItems, ip);
+    const { activeClients, activeRecordings, activePlaybacks } =
+      parseDeviceStatus(statusItems, ip);
 
     // Update Tuner Summary Badge in header
     if (tunerSummaryBadge) {
       if (state.deviceInfo?.StorageID && !state.deviceInfo?.TunerCount) {
-        tunerSummaryBadge.textContent = '0 Tuners';
-        tunerSummaryBadge.className = 'badge';
+        tunerSummaryBadge.textContent = "0 Tuners";
+        tunerSummaryBadge.className = "badge";
       } else {
-        const physicalTuners = statusItems.filter((item) =>
-          item.Resource && item.Resource.toLowerCase().startsWith('tuner')
+        const physicalTuners = statusItems.filter(
+          (item) =>
+            item.Resource && item.Resource.toLowerCase().startsWith("tuner"),
         );
         if (physicalTuners.length > 0) {
-          const activeCount = physicalTuners.filter((t) => t.TargetIP && t.TargetIP !== 'none').length;
+          const activeCount = physicalTuners.filter(
+            (t) => t.TargetIP && t.TargetIP !== "none",
+          ).length;
           tunerSummaryBadge.textContent = `${activeCount} / ${physicalTuners.length} Active`;
-          tunerSummaryBadge.className = `badge ${activeCount > 0 ? 'badge-hd' : ''}`;
+          tunerSummaryBadge.className = `badge ${activeCount > 0 ? "badge-hd" : ""}`;
         }
       }
     }
@@ -1214,12 +1331,18 @@ async function updateSystemLiveStatus() {
     // 3. Render Active Clients & Playbacks
     if (infoActiveClients) {
       if (activeClients.length === 0 && activePlaybacks.length === 0) {
-        infoActiveClients.innerHTML = '<span class="text-muted" style="font-weight: normal;">None (Idle)</span>';
+        infoActiveClients.innerHTML =
+          '<span class="text-muted" style="font-weight: normal;">None (Idle)</span>';
       } else {
-        let html = '';
+        let html = "";
         if (activeClients.length > 0) {
-          const countText = activeClients.length === 1 ? '1 Streaming' : `${activeClients.length} Streaming`;
-          const clientDetails = activeClients.map((c) => `${c.ip} (${c.channel || 'Live'})`).join('\n');
+          const countText =
+            activeClients.length === 1
+              ? "1 Streaming"
+              : `${activeClients.length} Streaming`;
+          const clientDetails = activeClients
+            .map((c) => `${c.ip} (${c.channel || "Live"})`)
+            .join("\n");
           html += `
             <a href="#tuners" class="status-link" title="${clientDetails} • View details on Tuners tab">
               <span class="badge badge-active-client">📺 ${countText}</span>
@@ -1228,8 +1351,13 @@ async function updateSystemLiveStatus() {
           `;
         }
         if (activePlaybacks.length > 0) {
-          const countText = activePlaybacks.length === 1 ? '1 Playback' : `${activePlaybacks.length} Playbacks`;
-          const pbDetails = activePlaybacks.map((p) => `${p.name} on ${p.ip}`).join('\n');
+          const countText =
+            activePlaybacks.length === 1
+              ? "1 Playback"
+              : `${activePlaybacks.length} Playbacks`;
+          const pbDetails = activePlaybacks
+            .map((p) => `${p.name} on ${p.ip}`)
+            .join("\n");
           html += `
             <a href="#recordings" class="status-link status-link-playback" title="${pbDetails} • View details on Recordings tab">
               <span class="badge badge-active-playback">▶️ ${countText}</span>
@@ -1244,12 +1372,16 @@ async function updateSystemLiveStatus() {
     // 4. Render Active Recordings
     if (infoActiveRecordings) {
       if (activeRecordings.length === 0) {
-        infoActiveRecordings.innerHTML = '<span class="text-muted" style="font-weight: normal;">None (Idle)</span>';
+        infoActiveRecordings.innerHTML =
+          '<span class="text-muted" style="font-weight: normal;">None (Idle)</span>';
       } else {
-        const countText = activeRecordings.length === 1 ? '1 Active' : `${activeRecordings.length} Active`;
-        const recDetails = activeRecordings.map((r) => r.channel).join('\n');
+        const countText =
+          activeRecordings.length === 1
+            ? "1 Active"
+            : `${activeRecordings.length} Active`;
+        const recDetails = activeRecordings.map((r) => r.channel).join("\n");
         infoActiveRecordings.innerHTML = `
-          <a href="#recordings" class="status-link" title="${recDetails ? recDetails + ' • ' : ''}View details on Recordings tab">
+          <a href="#recordings" class="status-link" title="${recDetails ? recDetails + " • " : ""}View details on Recordings tab">
             <span class="badge badge-active-record">🔴 ${countText}</span>
             <span class="status-arrow">Recordings ↗</span>
           </a>
@@ -1260,14 +1392,14 @@ async function updateSystemLiveStatus() {
     // 5. Render Storage (Used / Free)
     await refreshStorageUsage();
   } catch (err) {
-    console.warn('Error updating system live status:', err);
+    console.warn("Error updating system live status:", err);
   }
 }
 
 function renderChannelsCount(allowed, total) {
   if (!infoChannels) return;
   if (total === 0) {
-    infoChannels.textContent = '0 Channels';
+    infoChannels.textContent = "0 Channels";
   } else if (allowed === total) {
     infoChannels.textContent = `${total} Channels`;
   } else {
@@ -1276,7 +1408,11 @@ function renderChannelsCount(allowed, total) {
 }
 
 async function loadChannelsCount() {
-  if (state.lineup && state.lineup.length > 0 && state.lineup.some((ch) => ch.Frequency)) {
+  if (
+    state.lineup &&
+    state.lineup.length > 0 &&
+    state.lineup.some((ch) => ch.Frequency)
+  ) {
     updateLineupStats();
     return;
   }
@@ -1287,13 +1423,15 @@ async function discoverLocalMdns() {
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 2500);
-    const res = await fetch('http://hdhomerun.local/discover.json', { signal: controller.signal });
+    const res = await fetch("http://hdhomerun.local/discover.json", {
+      signal: controller.signal,
+    });
     clearTimeout(timeoutId);
     if (!res.ok) return null;
     const data = await res.json();
     if (data && (data.DeviceID || data.ModelNumber)) {
       // Determine host: prefer hostname from BaseURL if available, or 'hdhomerun.local'
-      let host = 'hdhomerun.local';
+      let host = "hdhomerun.local";
       if (data.BaseURL) {
         try {
           const u = new URL(data.BaseURL);
@@ -1305,7 +1443,7 @@ async function discoverLocalMdns() {
         ModelNumber: data.ModelNumber,
         DeviceID: data.DeviceID,
         StorageURL: data.StorageURL,
-        source: 'auto',
+        source: "auto",
       };
       saveDevice(dev);
       renderDeviceDropdown();
@@ -1313,21 +1451,21 @@ async function discoverLocalMdns() {
       return dev;
     }
   } catch (e) {
-    console.log('Local mDNS discovery skipped or offline:', e.message);
+    console.log("Local mDNS discovery skipped or offline:", e.message);
   }
   return null;
 }
 
 function goToManualIpEntry() {
-  connectionDot.className = 'status-dot disconnected';
+  connectionDot.className = "status-dot disconnected";
   renderDeviceDropdown();
-  const noticeEl = document.getElementById('no-device-notice');
-  if (noticeEl) noticeEl.classList.remove('hidden');
-  switchTab('system');
+  const noticeEl = document.getElementById("no-device-notice");
+  if (noticeEl) noticeEl.classList.remove("hidden");
+  switchTab("system");
   setTimeout(() => {
     if (inputCustomIp) {
       inputCustomIp.focus();
-      inputCustomIp.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      inputCustomIp.scrollIntoView({ behavior: "smooth", block: "center" });
     }
   }, 200);
 }
@@ -1339,10 +1477,10 @@ async function initDeviceConnection() {
   if (state.currentIp) {
     connected = await loadDeviceDetails();
     if (connected) {
-      const noticeEl = document.getElementById('no-device-notice');
-      if (noticeEl) noticeEl.classList.add('hidden');
+      const noticeEl = document.getElementById("no-device-notice");
+      if (noticeEl) noticeEl.classList.add("hidden");
       if (state.hasDvr) {
-        fetchRecordings(state.activeTab !== 'recordings').catch(() => {});
+        fetchRecordings(state.activeTab !== "recordings").catch(() => {});
       }
       // Background check for other devices via local mDNS
       discoverLocalMdns().catch(() => {});
@@ -1358,10 +1496,10 @@ async function initDeviceConnection() {
     renderDeviceDropdown();
     connected = await loadDeviceDetails();
     if (connected) {
-      const noticeEl = document.getElementById('no-device-notice');
-      if (noticeEl) noticeEl.classList.add('hidden');
+      const noticeEl = document.getElementById("no-device-notice");
+      if (noticeEl) noticeEl.classList.add("hidden");
       if (state.hasDvr) {
-        fetchRecordings(state.activeTab !== 'recordings').catch(() => {});
+        fetchRecordings(state.activeTab !== "recordings").catch(() => {});
       }
       return;
     }
@@ -1375,7 +1513,7 @@ function saveDevice(dev) {
   const ip = dev.ip || dev.LocalIP;
   if (!ip) return;
   const idx = state.devices.findIndex((d) => (d.ip || d.LocalIP) === ip);
-  const defaultSource = ip.includes('.local') ? 'auto' : 'manual';
+  const defaultSource = ip.includes(".local") ? "auto" : "manual";
   if (idx >= 0) {
     const existing = state.devices[idx];
     state.devices[idx] = {
@@ -1393,72 +1531,78 @@ function saveDevice(dev) {
 }
 
 function setupDeviceManagement() {
-  btnAddDevice.addEventListener('click', () => {
+  btnAddDevice.addEventListener("click", () => {
     const ip = inputCustomIp.value.trim();
     if (ip) {
-      inputCustomIp.value = '';
-      saveDevice({ ip, source: 'manual' });
+      inputCustomIp.value = "";
+      saveDevice({ ip, source: "manual" });
       renderDeviceDropdown();
       switchDevice(ip);
     }
   });
 
-  inputCustomIp.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
+  inputCustomIp.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
       btnAddDevice.click();
     }
   });
 
-  btnRediscover.addEventListener('click', async () => {
+  btnRediscover.addEventListener("click", async () => {
     btnRediscover.disabled = true;
-    btnRediscover.textContent = 'Discovering...';
+    btnRediscover.textContent = "Discovering...";
     await discoverLocalMdns();
-    btnRediscover.textContent = '🔍 Run mDNS Discovery';
+    btnRediscover.textContent = "🔍 Run mDNS Discovery";
     btnRediscover.disabled = false;
   });
 
   if (btnRefreshSystemStatus) {
-    btnRefreshSystemStatus.addEventListener('click', async () => {
+    btnRefreshSystemStatus.addEventListener("click", async () => {
       btnRefreshSystemStatus.disabled = true;
-      btnRefreshSystemStatus.textContent = 'Refreshing...';
+      btnRefreshSystemStatus.textContent = "Refreshing...";
       await loadDeviceDetails();
-      btnRefreshSystemStatus.textContent = '🔄 Refresh';
+      btnRefreshSystemStatus.textContent = "🔄 Refresh";
       btnRefreshSystemStatus.disabled = false;
     });
   }
 
-  const btnSystemLog = document.getElementById('btn-system-log');
+  const btnSystemLog = document.getElementById("btn-system-log");
   if (btnSystemLog) {
-    btnSystemLog.addEventListener('click', () => {
+    btnSystemLog.addEventListener("click", () => {
       if (state.currentIp) {
-        window.open(`http://${state.currentIp}/log.html`, '_blank');
+        window.open(`http://${state.currentIp}/log.html`, "_blank");
       } else {
-        showAlert('No device connected. Please enter a device IP above.', 'warning');
+        showAlert(
+          "No device connected. Please enter a device IP above.",
+          "warning",
+        );
       }
     });
   }
 
-  const btnRebootCheck = document.getElementById('btn-reboot-check');
+  const btnRebootCheck = document.getElementById("btn-reboot-check");
   if (btnRebootCheck) {
-    btnRebootCheck.addEventListener('click', () => {
+    btnRebootCheck.addEventListener("click", () => {
       if (state.currentIp) {
-        window.open(`http://${state.currentIp}`, '_blank');
+        window.open(`http://${state.currentIp}`, "_blank");
       } else {
-        showAlert('No device connected. Please enter a device IP above.', 'warning');
+        showAlert(
+          "No device connected. Please enter a device IP above.",
+          "warning",
+        );
       }
     });
   }
 
   // Handle in-app navigation links from Device Details
-  const deviceInfoList = document.getElementById('device-info-list');
+  const deviceInfoList = document.getElementById("device-info-list");
   if (deviceInfoList) {
-    deviceInfoList.addEventListener('click', (e) => {
+    deviceInfoList.addEventListener("click", (e) => {
       const link = e.target.closest('a[href^="#"]');
       if (link) {
         e.preventDefault();
-        const hash = link.getAttribute('href').replace('#', '').toLowerCase();
-        const target = hash === 'channels' ? 'lineup' : hash;
-        if (['tuners', 'lineup', 'recordings', 'system'].includes(target)) {
+        const hash = link.getAttribute("href").replace("#", "").toLowerCase();
+        const target = hash === "channels" ? "lineup" : hash;
+        if (["tuners", "lineup", "recordings", "system"].includes(target)) {
           switchTab(target);
         }
       }
@@ -1469,28 +1613,33 @@ function setupDeviceManagement() {
 }
 
 function renderDiscoveredList() {
-  discoveredDevicesList.innerHTML = '';
+  discoveredDevicesList.innerHTML = "";
   if (state.devices.length === 0) {
-    discoveredDevicesList.innerHTML = '<p class="text-sm text-muted">No saved or discovered devices.</p>';
+    discoveredDevicesList.innerHTML =
+      '<p class="text-sm text-muted">No saved or discovered devices.</p>';
     return;
   }
 
   state.devices.forEach((d) => {
     const ip = d.ip || d.LocalIP;
-    const isAuto = d.source === 'auto' || (!d.source && ip && ip.includes('.local'));
-    const modelName = d.ModelNumber || d.FriendlyName || (d.StorageID ? 'HDHomeRun RECORD' : 'HDHomeRun');
-    const item = document.createElement('div');
-    item.className = `device-item ${ip === state.currentIp ? 'active' : ''}`;
+    const isAuto =
+      d.source === "auto" || (!d.source && ip && ip.includes(".local"));
+    const modelName =
+      d.ModelNumber ||
+      d.FriendlyName ||
+      (d.StorageID ? "HDHomeRun RECORD" : "HDHomeRun");
+    const item = document.createElement("div");
+    item.className = `device-item ${ip === state.currentIp ? "active" : ""}`;
     item.innerHTML = `
       <div class="device-item-info">
         <div class="device-item-header">
           <strong>${modelName}</strong>
-          <button type="button" class="badge badge-btn ${isAuto ? 'badge-auto' : 'badge-manual'} btn-toggle-source" data-ip="${ip}" title="Click to toggle Auto / Manual note">
-            ${isAuto ? 'Auto' : 'Manual'}
+          <button type="button" class="badge badge-btn ${isAuto ? "badge-auto" : "badge-manual"} btn-toggle-source" data-ip="${ip}" title="Click to toggle Auto / Manual note">
+            ${isAuto ? "Auto" : "Manual"}
           </button>
         </div>
         <span class="text-sm text-muted">(${ip})</span>
-        ${d.DeviceID ? `<div class="text-sm font-mono text-muted">${d.DeviceID}</div>` : (d.StorageID ? `<div class="text-sm font-mono text-muted">Storage: ${d.StorageID}</div>` : '')}
+        ${d.DeviceID ? `<div class="text-sm font-mono text-muted">${d.DeviceID}</div>` : d.StorageID ? `<div class="text-sm font-mono text-muted">Storage: ${d.StorageID}</div>` : ""}
       </div>
       <div class="device-item-actions">
         ${
@@ -1504,25 +1653,25 @@ function renderDiscoveredList() {
     discoveredDevicesList.appendChild(item);
   });
 
-  document.querySelectorAll('.btn-switch-ip').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const ip = btn.getAttribute('data-ip');
+  document.querySelectorAll(".btn-switch-ip").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const ip = btn.getAttribute("data-ip");
       switchDevice(ip);
       renderDeviceDropdown();
       renderDiscoveredList();
     });
   });
 
-  document.querySelectorAll('.btn-toggle-source').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const ip = btn.getAttribute('data-ip');
+  document.querySelectorAll(".btn-toggle-source").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const ip = btn.getAttribute("data-ip");
       toggleDeviceSource(ip);
     });
   });
 
-  document.querySelectorAll('.btn-forget-device').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const ip = btn.getAttribute('data-ip');
+  document.querySelectorAll(".btn-forget-device").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const ip = btn.getAttribute("data-ip");
       forgetDevice(ip);
     });
   });
@@ -1531,15 +1680,18 @@ function renderDiscoveredList() {
 function toggleDeviceSource(targetIp) {
   const dev = state.devices.find((d) => (d.ip || d.LocalIP) === targetIp);
   if (!dev) return;
-  const currentIsAuto = dev.source === 'auto' || (!dev.source && targetIp.includes('.local'));
-  dev.source = currentIsAuto ? 'manual' : 'auto';
+  const currentIsAuto =
+    dev.source === "auto" || (!dev.source && targetIp.includes(".local"));
+  dev.source = currentIsAuto ? "manual" : "auto";
   localStorage.setItem(STORAGE_DEVICES, JSON.stringify(state.devices));
   renderDiscoveredList();
 }
 
 async function forgetDevice(targetIp) {
   const dev = state.devices.find((d) => (d.ip || d.LocalIP) === targetIp);
-  const label = dev?.ModelNumber ? `${dev.ModelNumber} (${targetIp})` : targetIp;
+  const label = dev?.ModelNumber
+    ? `${dev.ModelNumber} (${targetIp})`
+    : targetIp;
   if (!confirm(`Forget device "${label}"?`)) return;
 
   state.devices = state.devices.filter((d) => (d.ip || d.LocalIP) !== targetIp);
@@ -1574,8 +1726,8 @@ async function fetchTuners() {
         <p>No HDHomeRun device connected.</p>
         <p class="text-sm text-muted">Please configure a device IP on the <a href="#system" onclick="switchTab('system'); return false;">System</a> tab.</p>
       </div>`;
-    tunerSummaryBadge.textContent = 'Disconnected';
-    tunerSummaryBadge.className = 'badge';
+    tunerSummaryBadge.textContent = "Disconnected";
+    tunerSummaryBadge.className = "badge";
     return;
   }
 
@@ -1584,12 +1736,12 @@ async function fetchTuners() {
     tunersGrid.innerHTML = `
       <div class="empty-state" style="grid-column: 1 / -1; padding: 32px 16px;">
         <p><strong>Dedicated Storage Engine</strong></p>
-        <p class="text-sm text-muted mt-6">This device (${state.deviceInfo.FriendlyName || 'HDHomeRun RECORD'}) is a DVR recording server and does not have TV tuners.</p>
+        <p class="text-sm text-muted mt-6">This device (${state.deviceInfo.FriendlyName || "HDHomeRun RECORD"}) is a DVR recording server and does not have TV tuners.</p>
         <p class="text-sm text-muted mt-8">To monitor physical tuners, select an HDHomeRun tuner from the device menu in the header.</p>
       </div>`;
-    tunerSummaryBadge.textContent = '0 Tuners';
-    tunerSummaryBadge.className = 'badge';
-    connectionDot.className = 'status-dot connected';
+    tunerSummaryBadge.textContent = "0 Tuners";
+    tunerSummaryBadge.className = "badge";
+    connectionDot.className = "status-dot connected";
     return;
   }
 
@@ -1603,17 +1755,17 @@ async function fetchTuners() {
     state.tuners = tuners;
     parseDeviceStatus(tuners, ip);
     renderTuners(tuners);
-    connectionDot.className = 'status-dot connected';
+    connectionDot.className = "status-dot connected";
   } catch (err) {
-    console.warn('Error fetching /status.json:', err);
-    connectionDot.className = 'status-dot error';
-    tunerSummaryBadge.textContent = 'Offline';
-    tunerSummaryBadge.className = 'badge';
+    console.warn("Error fetching /status.json:", err);
+    connectionDot.className = "status-dot error";
+    tunerSummaryBadge.textContent = "Offline";
+    tunerSummaryBadge.className = "badge";
   }
 }
 
 function formatTunerName(rawName) {
-  if (!rawName) return 'Tuner';
+  if (!rawName) return "Tuner";
   const match = String(rawName).match(/^tuner(\d+)$/i);
   if (match) {
     return `Tuner ${match[1]}`;
@@ -1623,34 +1775,41 @@ function formatTunerName(rawName) {
 
 function renderTuners(statusItems) {
   if (!Array.isArray(statusItems) || statusItems.length === 0) {
-    tunersGrid.innerHTML = '<div class="loading-placeholder">No tuners reported by device.</div>';
+    tunersGrid.innerHTML =
+      '<div class="loading-placeholder">No tuners reported by device.</div>';
     return;
   }
 
   // Separate physical tuners (tuner0, tuner1...) from outgoing live streaming sessions
-  const physicalTuners = statusItems.filter((item) =>
-    item.Resource && item.Resource.toLowerCase().startsWith('tuner')
+  const physicalTuners = statusItems.filter(
+    (item) => item.Resource && item.Resource.toLowerCase().startsWith("tuner"),
   );
-  const liveSessions = statusItems.filter((item) =>
-    !item.Resource || !item.Resource.toLowerCase().startsWith('tuner')
+  const liveSessions = statusItems.filter(
+    (item) =>
+      !item.Resource || !item.Resource.toLowerCase().startsWith("tuner"),
   );
 
   let activeCount = 0;
-  tunersGrid.innerHTML = '';
+  tunersGrid.innerHTML = "";
 
   physicalTuners.forEach((tuner, index) => {
-    const isActive = Boolean(tuner.VctNumber || (tuner.TargetIP && tuner.TargetIP !== 'none'));
+    const isActive = Boolean(
+      tuner.VctNumber || (tuner.TargetIP && tuner.TargetIP !== "none"),
+    );
     if (isActive) activeCount++;
 
     const tunerName = tuner.Resource || `tuner${index}`;
 
-    const card = document.createElement('div');
-    card.className = `tuner-card ${isActive ? 'active' : ''} clickable-tuner-card`;
-    card.setAttribute('data-tuner-id', tunerName);
-    card.setAttribute('title', `Click to view real-time diagnostics & signal graph for ${formatTunerName(tunerName)}`);
+    const card = document.createElement("div");
+    card.className = `tuner-card ${isActive ? "active" : ""} clickable-tuner-card`;
+    card.setAttribute("data-tuner-id", tunerName);
+    card.setAttribute(
+      "title",
+      `Click to view real-time diagnostics & signal graph for ${formatTunerName(tunerName)}`,
+    );
 
-    let detailsHtml = '';
-    let sharedBadge = '';
+    let detailsHtml = "";
+    let sharedBadge = "";
     let isRecording = false;
     let hasExternalClient = false;
 
@@ -1663,62 +1822,106 @@ function renderTuners(statusItems) {
       const clientSessions = [];
 
       // If the tuner itself has a direct external target IP
-      if (tuner.TargetIP && tuner.TargetIP !== '[::1]' && tuner.TargetIP !== '::1' && tuner.TargetIP !== '127.0.0.1' && tuner.TargetIP !== 'none') {
-        clientSessions.push({ type: 'client', ip: tuner.TargetIP });
+      if (
+        tuner.TargetIP &&
+        tuner.TargetIP !== "[::1]" &&
+        tuner.TargetIP !== "::1" &&
+        tuner.TargetIP !== "127.0.0.1" &&
+        tuner.TargetIP !== "none"
+      ) {
+        clientSessions.push({ type: "client", ip: tuner.TargetIP });
       }
 
       // Check liveSessions (Resource: "live" or "record") from status.json
       const matchingSessions = liveSessions.filter((s) => {
-        if (s.VctNumber && tuner.VctNumber && s.VctNumber === tuner.VctNumber) return true;
-        if (s.VctName && tuner.VctName && s.VctName.toLowerCase() === tuner.VctName.toLowerCase()) return true;
+        if (s.VctNumber && tuner.VctNumber && s.VctNumber === tuner.VctNumber)
+          return true;
+        if (
+          s.VctName &&
+          tuner.VctName &&
+          s.VctName.toLowerCase() === tuner.VctName.toLowerCase()
+        )
+          return true;
         if (!s.Name) return false;
         return tuner.VctNumber && s.Name.includes(tuner.VctNumber);
       });
 
       matchingSessions.forEach((s) => {
-        const isRecord = (s.Resource && s.Resource.toLowerCase().includes('record')) ||
-                         (s.Name && (s.Name.toLowerCase().startsWith('record') || s.Name.toLowerCase() === 'record'));
-        if (!clientSessions.some((c) => c.ip === s.TargetIP && c.type === (isRecord ? 'record' : 'client'))) {
+        const isRecord =
+          (s.Resource && s.Resource.toLowerCase().includes("record")) ||
+          (s.Name &&
+            (s.Name.toLowerCase().startsWith("record") ||
+              s.Name.toLowerCase() === "record"));
+        if (
+          !clientSessions.some(
+            (c) =>
+              c.ip === s.TargetIP &&
+              c.type === (isRecord ? "record" : "client"),
+          )
+        ) {
           clientSessions.push({
-            type: isRecord ? 'record' : 'client',
-            ip: s.TargetIP || 'Local',
-            name: s.Name || '',
+            type: isRecord ? "record" : "client",
+            ip: s.TargetIP || "Local",
+            name: s.Name || "",
           });
         }
       });
 
-      hasExternalClient = clientSessions.some((c) => c.type === 'client' && c.ip !== 'Local');
+      hasExternalClient = clientSessions.some(
+        (c) => c.type === "client" && c.ip !== "Local",
+      );
 
       // Check if tuner is recording:
       const nowSec = Math.floor(Date.now() / 1000);
-      const hasRecordSession = clientSessions.some((c) => c.type === 'record');
+      const hasRecordSession = clientSessions.some((c) => c.type === "record");
       const hasEpisodeRecording = (state.episodes || []).some((ep) => {
-        return ep.StartTime && ep.EndTime && ep.StartTime <= nowSec && ep.EndTime > nowSec && ep.RecordSuccess !== 1 &&
-               (ep.ChannelNumber === tuner.VctNumber || (tuner.VctNumber && String(ep.ChannelNumber).includes(String(tuner.VctNumber))) || (ep.ChannelName && tuner.VctName && ep.ChannelName.toLowerCase() === tuner.VctName.toLowerCase()));
+        return (
+          ep.StartTime &&
+          ep.EndTime &&
+          ep.StartTime <= nowSec &&
+          ep.EndTime > nowSec &&
+          ep.RecordSuccess !== 1 &&
+          (ep.ChannelNumber === tuner.VctNumber ||
+            (tuner.VctNumber &&
+              String(ep.ChannelNumber).includes(String(tuner.VctNumber))) ||
+            (ep.ChannelName &&
+              tuner.VctName &&
+              ep.ChannelName.toLowerCase() === tuner.VctName.toLowerCase()))
+        );
       });
-      const isLocalOnly = !hasExternalClient && (clientSessions.length === 0 || clientSessions.every(c => c.ip === 'Local'));
-      isRecording = hasRecordSession || hasEpisodeRecording || (isLocalOnly && state.hasDvr);
+      const isLocalOnly =
+        !hasExternalClient &&
+        (clientSessions.length === 0 ||
+          clientSessions.every((c) => c.ip === "Local"));
+      isRecording =
+        hasRecordSession ||
+        hasEpisodeRecording ||
+        (isLocalOnly && state.hasDvr);
 
-      let clientsDisplay = '';
+      let clientsDisplay = "";
       if (clientSessions.length === 0) {
-        clientsDisplay = '<span>Client: <code>Local</code></span>';
+        clientsDisplay = "<span>Client: <code>Local</code></span>";
       } else if (clientSessions.length === 1) {
         const c = clientSessions[0];
-        clientsDisplay = `<span>Client: <code>${c.type === 'record' ? '📼 DVR Record' : c.ip}</code></span>`;
+        clientsDisplay = `<span>Client: <code>${c.type === "record" ? "📼 DVR Record" : c.ip}</code></span>`;
       } else {
         clientsDisplay = `
           <div class="tuner-shared-clients">
             <span class="shared-clients-label">👥 Shared (${clientSessions.length} sessions):</span>
             <div class="shared-clients-tags">
-              ${clientSessions.map((c) => `<span class="client-badge">${c.type === 'record' ? '📼 DVR' : c.ip}</span>`).join('')}
+              ${clientSessions.map((c) => `<span class="client-badge">${c.type === "record" ? "📼 DVR" : c.ip}</span>`).join("")}
             </div>
           </div>
         `;
       }
 
       // Network bitrate
-      const rfInfo = getRfChannelInfo(tuner.Frequency || (state.lineup?.find(c => c.GuideNumber === tuner.VctNumber)?.Frequency));
-      let rateDisplay = '';
+      const rfInfo = getRfChannelInfo(
+        tuner.Frequency ||
+          state.lineup?.find((c) => c.GuideNumber === tuner.VctNumber)
+            ?.Frequency,
+      );
+      let rateDisplay = "";
       if (tuner.NetworkRate) {
         rateDisplay = `<span>Rate: <strong>${(tuner.NetworkRate / 1000000).toFixed(2)} Mbps</strong></span>`;
       } else if (tuner.Frequency && !rfInfo) {
@@ -1730,16 +1933,16 @@ function renderTuners(statusItems) {
       }
 
       const bandBadge = rfInfo
-        ? `<span class="badge ${rfInfo.band === 'UHF' ? 'badge-uhf' : 'badge-vhf'}" title="${rfInfo.bandDetail} (Physical RF ${rfInfo.rf || '—'} • ${rfInfo.freqMhz} MHz)">${rfInfo.band}</span>`
-        : '';
+        ? `<span class="badge ${rfInfo.band === "UHF" ? "badge-uhf" : "badge-vhf"}" title="${rfInfo.bandDetail} (Physical RF ${rfInfo.rf || "—"} • ${rfInfo.freqMhz} MHz)">${rfInfo.band}</span>`
+        : "";
 
       const rfSubHtml = rfInfo
-        ? `<div class="tuner-channel-rf text-xs text-muted" title="${rfInfo.bandDetail} • Physical RF ${rfInfo.rf || '—'} • ${rfInfo.freqMhz} MHz">${rfInfo.freqMhz} MHz • RF ${rfInfo.rf || '—'}</div>`
-        : '';
+        ? `<div class="tuner-channel-rf text-xs text-muted" title="${rfInfo.bandDetail} • Physical RF ${rfInfo.rf || "—"} • ${rfInfo.freqMhz} MHz">${rfInfo.freqMhz} MHz • RF ${rfInfo.rf || "—"}</div>`
+        : "";
 
       const stationInfo = getStationInfo(tuner.VctName);
-      let logoHtml = '';
-      let localityHtml = '';
+      let logoHtml = "";
+      let localityHtml = "";
       if (stationInfo) {
         if (stationInfo.logo) {
           logoHtml = `<div class="channel-logo-wrap"><img src="${stationInfo.logo}" alt="${stationInfo.network}" class="affiliate-logo tuner-affiliate-logo" title="${stationInfo.network} • ${stationInfo.locality}" /></div>`;
@@ -1760,12 +1963,12 @@ function renderTuners(statusItems) {
           <div class="tuner-channel-row">
             ${logoHtml}
             <div class="tuner-channel-title">
-              <span class="tuner-channel-name">${tuner.VctName || 'Unknown Channel'}</span>
+              <span class="tuner-channel-name">${tuner.VctName || "Unknown Channel"}</span>
               ${localityHtml}
             </div>
             <div class="tuner-channel-badge-group">
               <div class="tuner-channel-num-row">
-                <span class="tuner-channel-number">${tuner.VctNumber ? `Ch ${tuner.VctNumber}` : ''}</span>
+                <span class="tuner-channel-number">${tuner.VctNumber ? `Ch ${tuner.VctNumber}` : ""}</span>
                 ${bandBadge}
               </div>
               ${rfSubHtml}
@@ -1778,9 +1981,9 @@ function renderTuners(statusItems) {
         </div>
 
         <div class="metric-group">
-          ${renderMetricBar('Signal Strength', strength)}
-          ${renderMetricBar('SNR Quality', quality)}
-          ${renderMetricBar('Symbol Quality', symbol)}
+          ${renderMetricBar("Signal Strength", strength)}
+          ${renderMetricBar("SNR Quality", quality)}
+          ${renderMetricBar("Symbol Quality", symbol)}
         </div>
       `;
     } else {
@@ -1792,23 +1995,23 @@ function renderTuners(statusItems) {
     }
 
     // Determine status badge and indicator dot
-    let statusText = 'Idle';
-    let statusClass = 'idle';
-    let dotClass = '';
+    let statusText = "Idle";
+    let statusClass = "idle";
+    let dotClass = "";
 
     if (isActive) {
       if (isRecording && hasExternalClient) {
-        statusText = 'Streaming & Recording';
-        statusClass = 'recording-streaming';
-        dotClass = 'recording';
+        statusText = "Streaming & Recording";
+        statusClass = "recording-streaming";
+        dotClass = "recording";
       } else if (isRecording) {
-        statusText = 'Recording';
-        statusClass = 'recording';
-        dotClass = 'recording';
+        statusText = "Recording";
+        statusClass = "recording";
+        dotClass = "recording";
       } else {
-        statusText = 'Streaming';
-        statusClass = 'streaming';
-        dotClass = 'connected';
+        statusText = "Streaming";
+        statusClass = "streaming";
+        dotClass = "connected";
       }
     }
 
@@ -1817,7 +2020,7 @@ function renderTuners(statusItems) {
         <span class="tuner-name">
           <span class="status-dot ${dotClass}"></span>
           ${formatTunerName(tunerName)}
-          ${sharedBadge || ''}
+          ${sharedBadge || ""}
         </span>
         <span class="tuner-status-badge ${statusClass}">${statusText}</span>
       </div>
@@ -1827,7 +2030,7 @@ function renderTuners(statusItems) {
       </div>
     `;
 
-    card.addEventListener('click', () => {
+    card.addEventListener("click", () => {
       openTunerDetail(tunerName);
     });
 
@@ -1835,12 +2038,14 @@ function renderTuners(statusItems) {
   });
 
   tunerSummaryBadge.textContent = `${activeCount} / ${physicalTuners.length} Active`;
-  tunerSummaryBadge.className = `badge ${activeCount > 0 ? 'badge-hd' : ''}`;
+  tunerSummaryBadge.className = `badge ${activeCount > 0 ? "badge-hd" : ""}`;
 
   // If tuner detail view is currently open, record sample and update it
   if (state.selectedTuner) {
-    const activeTuner = physicalTuners.find((t) =>
-      t.Resource && t.Resource.toLowerCase() === state.selectedTuner.toLowerCase()
+    const activeTuner = physicalTuners.find(
+      (t) =>
+        t.Resource &&
+        t.Resource.toLowerCase() === state.selectedTuner.toLowerCase(),
     ) || { Resource: state.selectedTuner };
     recordTunerSample(activeTuner, liveSessions);
     updateTunerDetailView(activeTuner, liveSessions);
@@ -1851,9 +2056,9 @@ function renderTuners(statusItems) {
 }
 
 function renderMetricBar(label, percent) {
-  let gradeClass = 'poor';
-  if (percent >= 80) gradeClass = 'good';
-  else if (percent >= 60) gradeClass = 'fair';
+  let gradeClass = "poor";
+  if (percent >= 80) gradeClass = "good";
+  else if (percent >= 60) gradeClass = "fair";
 
   return `
     <div class="metric-row">
@@ -1868,7 +2073,7 @@ function renderMetricBar(label, percent) {
   `;
 }
 
-btnRefreshTuners.addEventListener('click', fetchTuners);
+btnRefreshTuners.addEventListener("click", fetchTuners);
 
 /* ==========================================================================
    Tuner Detail & Real-Time Diagnostics Graphing
@@ -1876,16 +2081,16 @@ btnRefreshTuners.addEventListener('click', fetchTuners);
 
 function setupTunerDetailEvents() {
   if (btnBackToTuners) {
-    btnBackToTuners.addEventListener('click', () => {
+    btnBackToTuners.addEventListener("click", () => {
       closeTunerDetail();
     });
   }
 
   sampleRatePills.forEach((pill) => {
-    pill.addEventListener('click', () => {
-      sampleRatePills.forEach((p) => p.classList.remove('active'));
-      pill.classList.add('active');
-      const interval = parseInt(pill.getAttribute('data-interval'), 10) || 1000;
+    pill.addEventListener("click", () => {
+      sampleRatePills.forEach((p) => p.classList.remove("active"));
+      pill.classList.add("active");
+      const interval = parseInt(pill.getAttribute("data-interval"), 10) || 1000;
       state.tunerSampleInterval = interval;
       if (state.selectedTuner && !state.isGraphPaused) {
         startTunerDetailPolling();
@@ -1894,11 +2099,13 @@ function setupTunerDetailEvents() {
   });
 
   if (btnToggleGraphPause) {
-    btnToggleGraphPause.addEventListener('click', () => {
+    btnToggleGraphPause.addEventListener("click", () => {
       state.isGraphPaused = !state.isGraphPaused;
-      btnToggleGraphPause.textContent = state.isGraphPaused ? '▶ Resume' : '⏸ Pause';
+      btnToggleGraphPause.textContent = state.isGraphPaused
+        ? "▶ Resume"
+        : "⏸ Pause";
       if (graphLiveIndicator) {
-        graphLiveIndicator.classList.toggle('paused', state.isGraphPaused);
+        graphLiveIndicator.classList.toggle("paused", state.isGraphPaused);
       }
       if (!state.isGraphPaused) {
         startTunerDetailPolling();
@@ -1908,12 +2115,12 @@ function setupTunerDetailEvents() {
     });
   }
 
-  document.querySelectorAll('#chart-legend .legend-item').forEach((item) => {
-    item.addEventListener('click', () => {
-      const series = item.getAttribute('data-series');
+  document.querySelectorAll("#chart-legend .legend-item").forEach((item) => {
+    item.addEventListener("click", () => {
+      const series = item.getAttribute("data-series");
       if (series && state.activeSeries[series] !== undefined) {
         state.activeSeries[series] = !state.activeSeries[series];
-        item.classList.toggle('active', state.activeSeries[series]);
+        item.classList.toggle("active", state.activeSeries[series]);
         renderTunerGraph();
       }
     });
@@ -1922,20 +2129,22 @@ function setupTunerDetailEvents() {
 
 function openTunerDetail(tunerId, updateHash = true) {
   state.selectedTuner = tunerId;
-  tunersOverview.classList.add('hidden');
-  tunerDetailView.classList.remove('hidden');
+  tunersOverview.classList.add("hidden");
+  tunerDetailView.classList.remove("hidden");
 
   if (updateHash) {
-    history.pushState(null, '', `#tuners?tuner=${tunerId}`);
+    history.pushState(null, "", `#tuners?tuner=${tunerId}`);
   }
 
   // Find existing tuner data
-  const tuner = (state.tuners || []).find((item) =>
-    item.Resource && item.Resource.toLowerCase() === tunerId.toLowerCase()
+  const tuner = (state.tuners || []).find(
+    (item) =>
+      item.Resource && item.Resource.toLowerCase() === tunerId.toLowerCase(),
   ) || { Resource: tunerId };
 
-  const liveSessions = (state.tuners || []).filter((item) =>
-    !item.Resource || !item.Resource.toLowerCase().startsWith('tuner')
+  const liveSessions = (state.tuners || []).filter(
+    (item) =>
+      !item.Resource || !item.Resource.toLowerCase().startsWith("tuner"),
   );
 
   recordTunerSample(tuner, liveSessions);
@@ -1948,11 +2157,11 @@ function openTunerDetail(tunerId, updateHash = true) {
 function closeTunerDetail(updateHash = true) {
   state.selectedTuner = null;
   stopTunerDetailPolling();
-  tunerDetailView.classList.add('hidden');
-  tunersOverview.classList.remove('hidden');
+  tunerDetailView.classList.add("hidden");
+  tunersOverview.classList.remove("hidden");
 
   if (updateHash) {
-    history.pushState(null, '', '#tuners');
+    history.pushState(null, "", "#tuners");
   }
 }
 
@@ -1962,7 +2171,10 @@ function startTunerDetailPolling() {
 
   // Poll immediately, then start interval
   pollTunerDetail();
-  state.tunerPollTimer = setInterval(pollTunerDetail, state.tunerSampleInterval);
+  state.tunerPollTimer = setInterval(
+    pollTunerDetail,
+    state.tunerSampleInterval,
+  );
 }
 
 function stopTunerDetailPolling() {
@@ -1982,22 +2194,26 @@ async function pollTunerDetail() {
     const statusItems = await res.json();
     state.tuners = statusItems;
 
-    const physicalTuners = statusItems.filter((item) =>
-      item.Resource && item.Resource.toLowerCase().startsWith('tuner')
+    const physicalTuners = statusItems.filter(
+      (item) =>
+        item.Resource && item.Resource.toLowerCase().startsWith("tuner"),
     );
-    const liveSessions = statusItems.filter((item) =>
-      !item.Resource || !item.Resource.toLowerCase().startsWith('tuner')
+    const liveSessions = statusItems.filter(
+      (item) =>
+        !item.Resource || !item.Resource.toLowerCase().startsWith("tuner"),
     );
 
-    const tuner = physicalTuners.find((item) =>
-      item.Resource && item.Resource.toLowerCase() === state.selectedTuner.toLowerCase()
+    const tuner = physicalTuners.find(
+      (item) =>
+        item.Resource &&
+        item.Resource.toLowerCase() === state.selectedTuner.toLowerCase(),
     ) || { Resource: state.selectedTuner };
 
     recordTunerSample(tuner, liveSessions);
     updateTunerDetailView(tuner, liveSessions);
     renderTunerGraph();
   } catch (err) {
-    console.warn('Error polling tuner detail:', err);
+    console.warn("Error polling tuner detail:", err);
   }
 }
 
@@ -2010,7 +2226,9 @@ function recordTunerSample(tuner, liveSessions = []) {
   }
 
   const history = state.tunerHistory[tunerId];
-  const isActive = Boolean(tuner.VctNumber || (tuner.TargetIP && tuner.TargetIP !== 'none'));
+  const isActive = Boolean(
+    tuner.VctNumber || (tuner.TargetIP && tuner.TargetIP !== "none"),
+  );
 
   const sample = {
     timestamp: Date.now(),
@@ -2032,65 +2250,106 @@ function updateTunerDetailView(tunerData, liveSessions = []) {
   const tunerId = state.selectedTuner;
   if (!tunerId) return;
 
-  const tuner = tunerData || (state.tuners || []).find((item) =>
-    item.Resource && item.Resource.toLowerCase() === tunerId.toLowerCase()
-  ) || { Resource: tunerId };
+  const tuner = tunerData ||
+    (state.tuners || []).find(
+      (item) =>
+        item.Resource && item.Resource.toLowerCase() === tunerId.toLowerCase(),
+    ) || { Resource: tunerId };
 
-  const isActive = Boolean(tuner.VctNumber || (tuner.TargetIP && tuner.TargetIP !== 'none'));
+  const isActive = Boolean(
+    tuner.VctNumber || (tuner.TargetIP && tuner.TargetIP !== "none"),
+  );
 
   // Title
   detailTunerName.textContent = formatTunerName(tuner.Resource || tunerId);
 
   // Find all client sessions sharing this tuner
   const clientSessions = [];
-  if (tuner.TargetIP && tuner.TargetIP !== '[::1]' && tuner.TargetIP !== '::1' && tuner.TargetIP !== '127.0.0.1' && tuner.TargetIP !== 'none') {
-    clientSessions.push({ type: 'client', ip: tuner.TargetIP });
+  if (
+    tuner.TargetIP &&
+    tuner.TargetIP !== "[::1]" &&
+    tuner.TargetIP !== "::1" &&
+    tuner.TargetIP !== "127.0.0.1" &&
+    tuner.TargetIP !== "none"
+  ) {
+    clientSessions.push({ type: "client", ip: tuner.TargetIP });
   }
 
   const matchingSessions = (liveSessions || []).filter((s) => {
-    if (s.VctNumber && tuner.VctNumber && s.VctNumber === tuner.VctNumber) return true;
-    if (s.VctName && tuner.VctName && s.VctName.toLowerCase() === tuner.VctName.toLowerCase()) return true;
+    if (s.VctNumber && tuner.VctNumber && s.VctNumber === tuner.VctNumber)
+      return true;
+    if (
+      s.VctName &&
+      tuner.VctName &&
+      s.VctName.toLowerCase() === tuner.VctName.toLowerCase()
+    )
+      return true;
     if (!s.Name) return false;
     return tuner.VctNumber && s.Name.includes(tuner.VctNumber);
   });
 
   matchingSessions.forEach((s) => {
-    const isRecord = (s.Resource && s.Resource.toLowerCase().includes('record')) ||
-                     (s.Name && (s.Name.toLowerCase().startsWith('record') || s.Name.toLowerCase() === 'record'));
-    if (!clientSessions.some((c) => c.ip === s.TargetIP && c.type === (isRecord ? 'record' : 'client'))) {
+    const isRecord =
+      (s.Resource && s.Resource.toLowerCase().includes("record")) ||
+      (s.Name &&
+        (s.Name.toLowerCase().startsWith("record") ||
+          s.Name.toLowerCase() === "record"));
+    if (
+      !clientSessions.some(
+        (c) =>
+          c.ip === s.TargetIP && c.type === (isRecord ? "record" : "client"),
+      )
+    ) {
       clientSessions.push({
-        type: isRecord ? 'record' : 'client',
-        ip: s.TargetIP || 'Local',
-        name: s.Name || '',
+        type: isRecord ? "record" : "client",
+        ip: s.TargetIP || "Local",
+        name: s.Name || "",
       });
     }
   });
 
-  const hasExternalClient = clientSessions.some((c) => c.type === 'client' && c.ip !== 'Local');
+  const hasExternalClient = clientSessions.some(
+    (c) => c.type === "client" && c.ip !== "Local",
+  );
 
   // Check recording
   const nowSec = Math.floor(Date.now() / 1000);
-  const hasRecordSession = clientSessions.some((c) => c.type === 'record');
+  const hasRecordSession = clientSessions.some((c) => c.type === "record");
   const hasEpisodeRecording = (state.episodes || []).some((ep) => {
-    return ep.StartTime && ep.EndTime && ep.StartTime <= nowSec && ep.EndTime > nowSec && ep.RecordSuccess !== 1 &&
-           (ep.ChannelNumber === tuner.VctNumber || (tuner.VctNumber && String(ep.ChannelNumber).includes(String(tuner.VctNumber))) || (ep.ChannelName && tuner.VctName && ep.ChannelName.toLowerCase() === tuner.VctName.toLowerCase()));
+    return (
+      ep.StartTime &&
+      ep.EndTime &&
+      ep.StartTime <= nowSec &&
+      ep.EndTime > nowSec &&
+      ep.RecordSuccess !== 1 &&
+      (ep.ChannelNumber === tuner.VctNumber ||
+        (tuner.VctNumber &&
+          String(ep.ChannelNumber).includes(String(tuner.VctNumber))) ||
+        (ep.ChannelName &&
+          tuner.VctName &&
+          ep.ChannelName.toLowerCase() === tuner.VctName.toLowerCase()))
+    );
   });
-  const isLocalOnly = !hasExternalClient && (clientSessions.length === 0 || clientSessions.every((c) => c.ip === 'Local'));
-  const isRecording = hasRecordSession || hasEpisodeRecording || (isLocalOnly && state.hasDvr);
+  const isLocalOnly =
+    !hasExternalClient &&
+    (clientSessions.length === 0 ||
+      clientSessions.every((c) => c.ip === "Local"));
+  const isRecording =
+    hasRecordSession || hasEpisodeRecording || (isLocalOnly && state.hasDvr);
 
   // Status Badge / Text
-  let statusText = 'Idle';
-  let dotClass = '';
+  let statusText = "Idle";
+  let dotClass = "";
   if (isActive) {
     if (isRecording && hasExternalClient) {
-      statusText = 'Streaming & Recording';
-      dotClass = 'recording';
+      statusText = "Streaming & Recording";
+      dotClass = "recording";
     } else if (isRecording) {
-      statusText = 'Recording';
-      dotClass = 'recording';
+      statusText = "Recording";
+      dotClass = "recording";
     } else {
-      statusText = 'Streaming';
-      dotClass = 'connected';
+      statusText = "Streaming";
+      dotClass = "connected";
     }
   }
   detailStatusText.textContent = statusText;
@@ -2100,15 +2359,18 @@ function updateTunerDetailView(tunerData, liveSessions = []) {
   if (clientSessions.length > 1) {
     detailSharedBadge.innerHTML = `<span class="badge badge-hd">Shared (${clientSessions.length})</span>`;
   } else {
-    detailSharedBadge.innerHTML = '';
+    detailSharedBadge.innerHTML = "";
   }
 
   // Channel Info & Logo
   if (isActive && (tuner.VctName || tuner.VctNumber)) {
     const stationInfo = getStationInfo(tuner.VctName);
-    const rfInfo = getRfChannelInfo(tuner.Frequency || (state.lineup?.find(c => c.GuideNumber === tuner.VctNumber)?.Frequency));
-    let logoHtml = '';
-    let localityText = '';
+    const rfInfo = getRfChannelInfo(
+      tuner.Frequency ||
+        state.lineup?.find((c) => c.GuideNumber === tuner.VctNumber)?.Frequency,
+    );
+    let logoHtml = "";
+    let localityText = "";
 
     if (stationInfo && stationInfo.logo) {
       logoHtml = `<div class="channel-logo-wrap"><img src="${stationInfo.logo}" alt="${stationInfo.network}" class="affiliate-logo tuner-affiliate-logo" title="${stationInfo.network} • ${stationInfo.locality}" /></div>`;
@@ -2123,37 +2385,48 @@ function updateTunerDetailView(tunerData, liveSessions = []) {
     }
 
     if (detailChannelLogo) detailChannelLogo.innerHTML = logoHtml;
-    detailChannelName.textContent = tuner.VctName || 'Channel In Use';
+    detailChannelName.textContent = tuner.VctName || "Channel In Use";
     if (detailChannelLocality) detailChannelLocality.textContent = localityText;
-    detailChannelNumber.textContent = tuner.VctNumber ? `Ch ${tuner.VctNumber}` : '';
+    detailChannelNumber.textContent = tuner.VctNumber
+      ? `Ch ${tuner.VctNumber}`
+      : "";
     if (detailChannelBand) {
       detailChannelBand.innerHTML = rfInfo
-        ? `<span class="badge ${rfInfo.band === 'UHF' ? 'badge-uhf' : 'badge-vhf'}" title="${rfInfo.bandDetail} (Physical RF ${rfInfo.rf || '—'} • ${rfInfo.freqMhz} MHz)">${rfInfo.band}</span>`
-        : '';
+        ? `<span class="badge ${rfInfo.band === "UHF" ? "badge-uhf" : "badge-vhf"}" title="${rfInfo.bandDetail} (Physical RF ${rfInfo.rf || "—"} • ${rfInfo.freqMhz} MHz)">${rfInfo.band}</span>`
+        : "";
     }
     if (detailChannelRf) {
-      detailChannelRf.textContent = rfInfo ? `${rfInfo.freqMhz} MHz • RF ${rfInfo.rf || '—'}` : '';
-      detailChannelRf.title = rfInfo ? `${rfInfo.bandDetail} • Physical RF ${rfInfo.rf || '—'} • ${rfInfo.freqMhz} MHz` : '';
+      detailChannelRf.textContent = rfInfo
+        ? `${rfInfo.freqMhz} MHz • RF ${rfInfo.rf || "—"}`
+        : "";
+      detailChannelRf.title = rfInfo
+        ? `${rfInfo.bandDetail} • Physical RF ${rfInfo.rf || "—"} • ${rfInfo.freqMhz} MHz`
+        : "";
     }
   } else {
-    if (detailChannelLogo) detailChannelLogo.innerHTML = '';
-    detailChannelName.textContent = '—';
-    if (detailChannelLocality) detailChannelLocality.textContent = '';
-    detailChannelNumber.textContent = '';
-    if (detailChannelBand) detailChannelBand.innerHTML = '';
+    if (detailChannelLogo) detailChannelLogo.innerHTML = "";
+    detailChannelName.textContent = "—";
+    if (detailChannelLocality) detailChannelLocality.textContent = "";
+    detailChannelNumber.textContent = "";
+    if (detailChannelBand) detailChannelBand.innerHTML = "";
     if (detailChannelRf) {
-      detailChannelRf.textContent = '';
-      detailChannelRf.title = '';
+      detailChannelRf.textContent = "";
+      detailChannelRf.title = "";
     }
   }
 
   // Client(s)
   if (clientSessions.length === 0) {
-    detailClientsList.innerHTML = isActive ? '<code>Local</code>' : '<span class="text-muted">None</span>';
+    detailClientsList.innerHTML = isActive
+      ? "<code>Local</code>"
+      : '<span class="text-muted">None</span>';
   } else {
-    detailClientsList.innerHTML = clientSessions.map((c) =>
-      `<span class="client-badge">${c.type === 'record' ? '📼 DVR' : c.ip}</span>`
-    ).join(' ');
+    detailClientsList.innerHTML = clientSessions
+      .map(
+        (c) =>
+          `<span class="client-badge">${c.type === "record" ? "📼 DVR" : c.ip}</span>`,
+      )
+      .join(" ");
   }
 
   // Network Bitrate
@@ -2165,9 +2438,9 @@ function updateTunerDetailView(tunerData, liveSessions = []) {
 
   // Idle Notice
   if (isActive) {
-    detailIdleNotice.classList.add('hidden');
+    detailIdleNotice.classList.add("hidden");
   } else {
-    detailIdleNotice.classList.remove('hidden');
+    detailIdleNotice.classList.remove("hidden");
   }
 
   // Metrics (Current, Min, Avg, Max)
@@ -2189,25 +2462,33 @@ function updateTunerDetailView(tunerData, liveSessions = []) {
       return { min, max, avg };
     };
 
-    const strStats = calcStats('strength');
+    const strStats = calcStats("strength");
     statMinStrength.textContent = `${strStats.min}%`;
     statAvgStrength.textContent = `${strStats.avg}%`;
     statMaxStrength.textContent = `${strStats.max}%`;
 
-    const qStats = calcStats('quality');
+    const qStats = calcStats("quality");
     statMinQuality.textContent = `${qStats.min}%`;
     statAvgQuality.textContent = `${qStats.avg}%`;
     statMaxQuality.textContent = `${qStats.max}%`;
 
-    const symStats = calcStats('symbol');
+    const symStats = calcStats("symbol");
     statMinSymbol.textContent = `${symStats.min}%`;
     statAvgSymbol.textContent = `${symStats.avg}%`;
     statMaxSymbol.textContent = `${symStats.max}%`;
   } else {
-    [statMinStrength, statAvgStrength, statMaxStrength,
-     statMinQuality, statAvgQuality, statMaxQuality,
-     statMinSymbol, statAvgSymbol, statMaxSymbol].forEach((el) => {
-      if (el) el.textContent = '—';
+    [
+      statMinStrength,
+      statAvgStrength,
+      statMaxStrength,
+      statMinQuality,
+      statAvgQuality,
+      statMaxQuality,
+      statMinSymbol,
+      statAvgSymbol,
+      statMaxSymbol,
+    ].forEach((el) => {
+      if (el) el.textContent = "—";
     });
   }
 }
@@ -2218,12 +2499,12 @@ function renderTunerGraph() {
 
   const history = state.tunerHistory[tunerId] || [];
   if (chartSampleCount) {
-    chartSampleCount.textContent = `${history.length} sample${history.length === 1 ? '' : 's'}`;
+    chartSampleCount.textContent = `${history.length} sample${history.length === 1 ? "" : "s"}`;
   }
 
   // 1. Grid & Y-Axis
   const gridPcts = [100, 75, 50, 25, 0];
-  let gridHtml = '';
+  let gridHtml = "";
   gridPcts.forEach((pct) => {
     const y = 20 + (1 - pct / 100) * 230;
     gridHtml += `
@@ -2240,9 +2521,9 @@ function renderTunerGraph() {
         Collecting signal metrics...
       </text>
     `;
-    if (chartTimeStart) chartTimeStart.textContent = '—';
-    if (chartTimeMid) chartTimeMid.textContent = '—';
-    if (chartTimeNow) chartTimeNow.textContent = 'Now';
+    if (chartTimeStart) chartTimeStart.textContent = "—";
+    if (chartTimeMid) chartTimeMid.textContent = "—";
+    if (chartTimeNow) chartTimeNow.textContent = "Now";
     return;
   }
 
@@ -2251,12 +2532,12 @@ function renderTunerGraph() {
   const plotW = 800 - paddingLeft - paddingRight;
   const stepX = plotW / Math.max(history.length - 1, 1);
 
-  let pathsHtml = '';
+  let pathsHtml = "";
 
   const seriesMeta = [
-    { key: 'strength', color: '#38bdf8', grad: 'grad-strength' },
-    { key: 'quality', color: '#34d399', grad: 'grad-quality' },
-    { key: 'symbol', color: '#a78bfa', grad: 'grad-symbol' },
+    { key: "strength", color: "#38bdf8", grad: "grad-strength" },
+    { key: "quality", color: "#34d399", grad: "grad-quality" },
+    { key: "symbol", color: "#a78bfa", grad: "grad-symbol" },
   ];
 
   seriesMeta.forEach(({ key, color, grad }) => {
@@ -2276,7 +2557,11 @@ function renderTunerGraph() {
         <circle cx="${pt.x}" cy="${pt.y}" r="5" fill="${color}" stroke="#0b1120" stroke-width="2" />
       `;
     } else {
-      const lineD = pts.reduce((acc, pt, i) => (i === 0 ? `M ${pt.x} ${pt.y}` : `${acc} L ${pt.x} ${pt.y}`), '');
+      const lineD = pts.reduce(
+        (acc, pt, i) =>
+          i === 0 ? `M ${pt.x} ${pt.y}` : `${acc} L ${pt.x} ${pt.y}`,
+        "",
+      );
       const areaD = `${lineD} L ${pts[pts.length - 1].x} 250 L ${pts[0].x} 250 Z`;
 
       pathsHtml += `<path d="${areaD}" fill="url(#${grad})" />`;
@@ -2292,40 +2577,47 @@ function renderTunerGraph() {
   // 3. X-Axis Time Labels
   const firstSample = history[0];
   const lastSample = history[history.length - 1];
-  const durationSec = Math.round((lastSample.timestamp - firstSample.timestamp) / 1000);
+  const durationSec = Math.round(
+    (lastSample.timestamp - firstSample.timestamp) / 1000,
+  );
 
   if (chartTimeStart) {
-    chartTimeStart.textContent = durationSec > 0 ? `-${durationSec}s` : '0s';
+    chartTimeStart.textContent = durationSec > 0 ? `-${durationSec}s` : "0s";
   }
   if (chartTimeMid) {
-    chartTimeMid.textContent = durationSec > 0 ? `-${Math.round(durationSec / 2)}s` : '';
+    chartTimeMid.textContent =
+      durationSec > 0 ? `-${Math.round(durationSec / 2)}s` : "";
   }
   if (chartTimeNow) {
-    chartTimeNow.textContent = 'Now (Live)';
+    chartTimeNow.textContent = "Now (Live)";
   }
 }
 
 function setupChartInteractions() {
   if (!chartContainer) return;
 
-  chartContainer.addEventListener('mousemove', (e) => {
+  chartContainer.addEventListener("mousemove", (e) => {
     handleChartHover(e.clientX, e.clientY);
   });
 
-  chartContainer.addEventListener('mouseleave', () => {
-    chartCrosshairGroup.innerHTML = '';
-    chartTooltip.classList.add('hidden');
+  chartContainer.addEventListener("mouseleave", () => {
+    chartCrosshairGroup.innerHTML = "";
+    chartTooltip.classList.add("hidden");
   });
 
-  chartContainer.addEventListener('touchmove', (e) => {
-    if (e.touches && e.touches[0]) {
-      handleChartHover(e.touches[0].clientX, e.touches[0].clientY);
-    }
-  }, { passive: true });
+  chartContainer.addEventListener(
+    "touchmove",
+    (e) => {
+      if (e.touches && e.touches[0]) {
+        handleChartHover(e.touches[0].clientX, e.touches[0].clientY);
+      }
+    },
+    { passive: true },
+  );
 
-  chartContainer.addEventListener('touchend', () => {
-    chartCrosshairGroup.innerHTML = '';
-    chartTooltip.classList.add('hidden');
+  chartContainer.addEventListener("touchend", () => {
+    chartCrosshairGroup.innerHTML = "";
+    chartTooltip.classList.add("hidden");
   });
 }
 
@@ -2345,13 +2637,16 @@ function handleChartHover(clientX, clientY) {
   const plotW = 800 - paddingLeft - paddingRight;
 
   if (svgX < paddingLeft || svgX > 800 - paddingRight) {
-    chartCrosshairGroup.innerHTML = '';
-    chartTooltip.classList.add('hidden');
+    chartCrosshairGroup.innerHTML = "";
+    chartTooltip.classList.add("hidden");
     return;
   }
 
   const stepX = plotW / Math.max(history.length - 1, 1);
-  const idx = Math.min(Math.max(Math.round((svgX - paddingLeft) / stepX), 0), history.length - 1);
+  const idx = Math.min(
+    Math.max(Math.round((svgX - paddingLeft) / stepX), 0),
+    history.length - 1,
+  );
   const sample = history[idx];
   if (!sample) return;
 
@@ -2360,9 +2655,9 @@ function handleChartHover(clientX, clientY) {
   let crosshairHtml = `<line x1="${ptX}" y1="20" x2="${ptX}" y2="250" stroke="rgba(255,255,255,0.35)" stroke-width="1.5" stroke-dasharray="3,3" />`;
 
   const seriesMeta = [
-    { key: 'strength', color: '#38bdf8' },
-    { key: 'quality', color: '#34d399' },
-    { key: 'symbol', color: '#a78bfa' },
+    { key: "strength", color: "#38bdf8" },
+    { key: "quality", color: "#34d399" },
+    { key: "symbol", color: "#a78bfa" },
   ];
 
   seriesMeta.forEach(({ key, color }) => {
@@ -2376,21 +2671,23 @@ function handleChartHover(clientX, clientY) {
   chartCrosshairGroup.innerHTML = crosshairHtml;
 
   const timeStr = new Date(sample.timestamp).toLocaleTimeString();
-  const rateMb = sample.rate ? (sample.rate / 1000000).toFixed(2) + ' Mbps' : '—';
+  const rateMb = sample.rate
+    ? (sample.rate / 1000000).toFixed(2) + " Mbps"
+    : "—";
 
   chartTooltip.innerHTML = `
     <div class="chart-tooltip-time">${timeStr}</div>
-    ${state.activeSeries.strength ? `<div class="chart-tooltip-row"><span class="label" style="color: #38bdf8;">Strength:</span><span class="val">${sample.strength}%</span></div>` : ''}
-    ${state.activeSeries.quality ? `<div class="chart-tooltip-row"><span class="label" style="color: #34d399;">SNR Quality:</span><span class="val">${sample.quality}%</span></div>` : ''}
-    ${state.activeSeries.symbol ? `<div class="chart-tooltip-row"><span class="label" style="color: #a78bfa;">Symbol:</span><span class="val">${sample.symbol}%</span></div>` : ''}
-    ${sample.rate ? `<div class="chart-tooltip-row"><span class="label">Rate:</span><span class="val">${rateMb}</span></div>` : ''}
+    ${state.activeSeries.strength ? `<div class="chart-tooltip-row"><span class="label" style="color: #38bdf8;">Strength:</span><span class="val">${sample.strength}%</span></div>` : ""}
+    ${state.activeSeries.quality ? `<div class="chart-tooltip-row"><span class="label" style="color: #34d399;">SNR Quality:</span><span class="val">${sample.quality}%</span></div>` : ""}
+    ${state.activeSeries.symbol ? `<div class="chart-tooltip-row"><span class="label" style="color: #a78bfa;">Symbol:</span><span class="val">${sample.symbol}%</span></div>` : ""}
+    ${sample.rate ? `<div class="chart-tooltip-row"><span class="label">Rate:</span><span class="val">${rateMb}</span></div>` : ""}
   `;
 
   const tooltipX = relX > rect.width - 160 ? relX - 150 : relX + 15;
   const tooltipY = Math.min(Math.max(relY - 30, 10), rect.height - 120);
   chartTooltip.style.left = `${tooltipX}px`;
   chartTooltip.style.top = `${tooltipY}px`;
-  chartTooltip.classList.remove('hidden');
+  chartTooltip.classList.remove("hidden");
 }
 
 /* ==========================================================================
@@ -2398,7 +2695,7 @@ function handleChartHover(clientX, clientY) {
    ========================================================================== */
 
 function setupPollingControls() {
-  btnTogglePoll.addEventListener('click', () => {
+  btnTogglePoll.addEventListener("click", () => {
     state.isPolling = !state.isPolling;
     updatePollUi();
     if (state.isPolling) {
@@ -2408,7 +2705,7 @@ function setupPollingControls() {
     }
   });
 
-  pollIntervalSelect.addEventListener('change', () => {
+  pollIntervalSelect.addEventListener("change", () => {
     const val = parseInt(pollIntervalSelect.value, 10);
     if (val === 0) {
       state.isPolling = false;
@@ -2423,13 +2720,13 @@ function setupPollingControls() {
 }
 
 function updatePollUi() {
-  const dot = btnTogglePoll.querySelector('.live-dot');
+  const dot = btnTogglePoll.querySelector(".live-dot");
   if (state.isPolling) {
-    dot.className = 'live-dot pulse';
-    pollBtnLabel.textContent = 'Live';
+    dot.className = "live-dot pulse";
+    pollBtnLabel.textContent = "Live";
   } else {
-    dot.className = 'live-dot paused';
-    pollBtnLabel.textContent = 'Paused';
+    dot.className = "live-dot paused";
+    pollBtnLabel.textContent = "Paused";
   }
 }
 
@@ -2439,14 +2736,14 @@ function startPolling() {
 
   state.pollTimer = setInterval(() => {
     // Only poll actively if the tab is visible and a device is connected
-    if (document.visibilityState === 'visible' && state.currentIp) {
-      if (state.activeTab === 'tuners') {
+    if (document.visibilityState === "visible" && state.currentIp) {
+      if (state.activeTab === "tuners") {
         fetchTuners();
-      } else if (state.activeTab === 'system') {
+      } else if (state.activeTab === "system") {
         updateSystemLiveStatus();
-      } else if (state.activeTab === 'recordings') {
+      } else if (state.activeTab === "recordings") {
         updateRecordingsLiveStatus();
-      } else if (state.activeTab === 'lineup') {
+      } else if (state.activeTab === "lineup") {
         updateLineupLiveStatus();
       }
     }
@@ -2492,18 +2789,27 @@ async function updateLineupLiveStatus() {
 }
 
 function getLineupSignalHtml(ch, activeTuner) {
-  const rfInfo = getRfChannelInfo((activeTuner && activeTuner.Frequency) || (ch && ch.Frequency));
-  const rfText = rfInfo ? ` • ${rfInfo.bandDetail}${rfInfo.rf ? ` (RF ${rfInfo.rf})` : ''} • ${rfInfo.freqMhz} MHz` : '';
+  const rfInfo = getRfChannelInfo(
+    (activeTuner && activeTuner.Frequency) || (ch && ch.Frequency),
+  );
+  const rfText = rfInfo
+    ? ` • ${rfInfo.bandDetail}${rfInfo.rf ? ` (RF ${rfInfo.rf})` : ""} • ${rfInfo.freqMhz} MHz`
+    : "";
 
-  if (activeTuner && (activeTuner.SignalQualityPercent != null || activeTuner.SignalStrengthPercent != null)) {
-    const sq = activeTuner.SignalQualityPercent ?? activeTuner.SignalStrengthPercent;
+  if (
+    activeTuner &&
+    (activeTuner.SignalQualityPercent != null ||
+      activeTuner.SignalStrengthPercent != null)
+  ) {
+    const sq =
+      activeTuner.SignalQualityPercent ?? activeTuner.SignalStrengthPercent;
     const ss = activeTuner.SignalStrengthPercent;
-    let gradeClass = 'poor';
-    if (sq >= 80) gradeClass = 'good';
-    else if (sq >= 60) gradeClass = 'fair';
+    let gradeClass = "poor";
+    if (sq >= 80) gradeClass = "good";
+    else if (sq >= 60) gradeClass = "fair";
 
     const tunerLabel = formatTunerName(activeTuner.Resource);
-    const tooltip = `Live on ${tunerLabel}: ${sq}% SNR Quality${ss != null ? ` (${ss}% Strength)` : ''}${rfText}`;
+    const tooltip = `Live on ${tunerLabel}: ${sq}% SNR Quality${ss != null ? ` (${ss}% Strength)` : ""}${rfText}`;
     return `
       <div class="signal-meter-wrapper" title="${tooltip}">
         <span class="live-dot-mini" title="Active live stream/recording"></span>
@@ -2518,11 +2824,11 @@ function getLineupSignalHtml(ch, activeTuner) {
   if (ch && (ch.SignalQuality != null || ch.SignalStrength != null)) {
     const sq = ch.SignalQuality ?? ch.SignalStrength;
     const ss = ch.SignalStrength;
-    let gradeClass = 'poor';
-    if (sq >= 80) gradeClass = 'good';
-    else if (sq >= 60) gradeClass = 'fair';
+    let gradeClass = "poor";
+    if (sq >= 80) gradeClass = "good";
+    else if (sq >= 60) gradeClass = "fair";
 
-    const tooltip = `Last Scan: ${sq}% Signal Quality${ss != null ? ` (${ss}% Strength)` : ''}${rfText} • Static value from last channel scan`;
+    const tooltip = `Last Scan: ${sq}% Signal Quality${ss != null ? ` (${ss}% Strength)` : ""}${rfText} • Static value from last channel scan`;
     return `
       <div class="signal-meter-wrapper" title="${tooltip}">
         <div class="signal-mini-bar">
@@ -2533,22 +2839,27 @@ function getLineupSignalHtml(ch, activeTuner) {
     `;
   }
 
-  return `<span class="text-muted" title="No scan data.${rfText ? rfText.replace(/^ • /, ' ') : ''} Signal is captured during channel scans or measured in real-time when actively tuned.">—</span>`;
+  return `<span class="text-muted" title="No scan data.${rfText ? rfText.replace(/^ • /, " ") : ""} Signal is captured during channel scans or measured in real-time when actively tuned.">—</span>`;
 }
 
 function updateLineupSignalMeters() {
-  const rows = lineupTbody.querySelectorAll('tr[data-guide-num]');
+  const rows = lineupTbody.querySelectorAll("tr[data-guide-num]");
   rows.forEach((tr) => {
-    const guideNum = tr.getAttribute('data-guide-num');
-    const cell = tr.querySelector('.signal-cell');
+    const guideNum = tr.getAttribute("data-guide-num");
+    const cell = tr.querySelector(".signal-cell");
     if (!cell || !guideNum) return;
 
     const ch = (state.lineup || []).find(
-      (c) => c.GuideNumber && (c.GuideNumber === guideNum || String(c.GuideNumber) === String(guideNum))
+      (c) =>
+        c.GuideNumber &&
+        (c.GuideNumber === guideNum ||
+          String(c.GuideNumber) === String(guideNum)),
     );
 
     const activeTuner = (state.tuners || []).find(
-      (t) => t.VctNumber && (t.VctNumber === guideNum || String(t.VctNumber) === String(guideNum))
+      (t) =>
+        t.VctNumber &&
+        (t.VctNumber === guideNum || String(t.VctNumber) === String(guideNum)),
     );
 
     cell.innerHTML = getLineupSignalHtml(ch, activeTuner);
@@ -2558,29 +2869,31 @@ function updateLineupSignalMeters() {
 function updateEpisodePlaybackBadges() {
   if (!state.hasDvr) return;
 
-  if (state.dvrSubView === 'episodes') {
-    const cards = recordingsContainer.querySelectorAll('.recording-card');
+  if (state.dvrSubView === "episodes") {
+    const cards = recordingsContainer.querySelectorAll(".recording-card");
     cards.forEach((card) => {
       const ep = card._episodeData;
       if (!ep) return;
 
-      const matchingPlaybacks = (state.activePlaybacks || []).filter((pb) => isEpisodeMatchingPlayback(ep, pb));
+      const matchingPlaybacks = (state.activePlaybacks || []).filter((pb) =>
+        isEpisodeMatchingPlayback(ep, pb),
+      );
       const isPlaying = matchingPlaybacks.length > 0;
-      card.classList.toggle('is-playing', isPlaying);
+      card.classList.toggle("is-playing", isPlaying);
 
-      const metaEl = card.querySelector('.recording-meta');
+      const metaEl = card.querySelector(".recording-meta");
       if (!metaEl) return;
 
-      let badgeEl = metaEl.querySelector('.badge-playing');
+      let badgeEl = metaEl.querySelector(".badge-playing");
       if (isPlaying) {
-        const clientIps = matchingPlaybacks.map((p) => p.ip).join(', ');
+        const clientIps = matchingPlaybacks.map((p) => p.ip).join(", ");
         const badgeText = `▶️ Playing (${clientIps})`;
         if (badgeEl) {
           badgeEl.textContent = badgeText;
           badgeEl.title = `Streaming playback to ${clientIps}`;
         } else {
-          badgeEl = document.createElement('span');
-          badgeEl.className = 'badge badge-playing';
+          badgeEl = document.createElement("span");
+          badgeEl.className = "badge badge-playing";
           badgeEl.textContent = badgeText;
           badgeEl.title = `Streaming playback to ${clientIps}`;
           metaEl.insertBefore(badgeEl, metaEl.firstChild);
@@ -2589,28 +2902,34 @@ function updateEpisodePlaybackBadges() {
         badgeEl.remove();
       }
     });
-  } else if (state.dvrSubView === 'series') {
-    const cards = recordingsContainer.querySelectorAll('.recording-card');
+  } else if (state.dvrSubView === "series") {
+    const cards = recordingsContainer.querySelectorAll(".recording-card");
     cards.forEach((card) => {
-      const seriesId = card.querySelector('.btn-view-series-episodes')?.getAttribute('data-series-id');
+      const seriesId = card
+        .querySelector(".btn-view-series-episodes")
+        ?.getAttribute("data-series-id");
       if (!seriesId) return;
 
-      const matchEpisodes = state.episodes.filter((ep) => ep.SeriesID === seriesId);
+      const matchEpisodes = state.episodes.filter(
+        (ep) => ep.SeriesID === seriesId,
+      );
       const hasPlayingEp = matchEpisodes.some((ep) =>
-        (state.activePlaybacks || []).some((pb) => isEpisodeMatchingPlayback(ep, pb))
+        (state.activePlaybacks || []).some((pb) =>
+          isEpisodeMatchingPlayback(ep, pb),
+        ),
       );
 
-      card.classList.toggle('is-playing', hasPlayingEp);
-      const metaEl = card.querySelector('.recording-meta');
+      card.classList.toggle("is-playing", hasPlayingEp);
+      const metaEl = card.querySelector(".recording-meta");
       if (!metaEl) return;
 
-      let badgeEl = metaEl.querySelector('.badge-playing');
+      let badgeEl = metaEl.querySelector(".badge-playing");
       if (hasPlayingEp) {
         if (!badgeEl) {
-          badgeEl = document.createElement('span');
-          badgeEl.className = 'badge badge-playing';
-          badgeEl.textContent = '▶️ Playing';
-          badgeEl.title = 'An episode in this series is currently playing';
+          badgeEl = document.createElement("span");
+          badgeEl.className = "badge badge-playing";
+          badgeEl.textContent = "▶️ Playing";
+          badgeEl.title = "An episode in this series is currently playing";
           metaEl.insertBefore(badgeEl, metaEl.firstChild);
         }
       } else if (badgeEl) {
@@ -2626,8 +2945,8 @@ function updateEpisodePlaybackBadges() {
 
 function isAtsc3Channel(ch) {
   return (
-    ch.VideoCodec === 'HEVC' ||
-    ch.AudioCodec === 'AC4' ||
+    ch.VideoCodec === "HEVC" ||
+    ch.AudioCodec === "AC4" ||
     (ch.GuideNumber && parseFloat(ch.GuideNumber) >= 100)
   );
 }
@@ -2642,17 +2961,29 @@ function updateLineupStats() {
   const atsc1Channels = state.lineup.filter((ch) => !isAtsc3Channel(ch));
   const drmChannels = state.lineup.filter((ch) => ch.DRM === 1);
   const nodrmChannels = state.lineup.filter((ch) => ch.DRM !== 1);
-  const hdChannels = state.lineup.filter((ch) => ch.HD === 1 || (ch.VideoCodec && ch.VideoCodec.includes('HD')));
-  const sdChannels = state.lineup.filter((ch) => !(ch.HD === 1 || (ch.VideoCodec && ch.VideoCodec.includes('HD'))));
+  const hdChannels = state.lineup.filter(
+    (ch) => ch.HD === 1 || (ch.VideoCodec && ch.VideoCodec.includes("HD")),
+  );
+  const sdChannels = state.lineup.filter(
+    (ch) => !(ch.HD === 1 || (ch.VideoCodec && ch.VideoCodec.includes("HD"))),
+  );
 
-  const vhfChannels = state.lineup.filter((ch) => getRfChannelInfo(ch.Frequency)?.band === 'VHF');
-  const vhfLowChannels = state.lineup.filter((ch) => getRfChannelInfo(ch.Frequency)?.bandDetail === 'VHF-Low');
-  const vhfHighChannels = state.lineup.filter((ch) => getRfChannelInfo(ch.Frequency)?.bandDetail === 'VHF-High');
-  const uhfChannels = state.lineup.filter((ch) => getRfChannelInfo(ch.Frequency)?.band === 'UHF');
+  const vhfChannels = state.lineup.filter(
+    (ch) => getRfChannelInfo(ch.Frequency)?.band === "VHF",
+  );
+  const vhfLowChannels = state.lineup.filter(
+    (ch) => getRfChannelInfo(ch.Frequency)?.bandDetail === "VHF-Low",
+  );
+  const vhfHighChannels = state.lineup.filter(
+    (ch) => getRfChannelInfo(ch.Frequency)?.bandDetail === "VHF-High",
+  );
+  const uhfChannels = state.lineup.filter(
+    (ch) => getRfChannelInfo(ch.Frequency)?.band === "UHF",
+  );
 
   if (lineupCountBadge) {
     lineupCountBadge.textContent = allowedChannels.length;
-    lineupCountBadge.classList.remove('hidden');
+    lineupCountBadge.classList.remove("hidden");
   }
 
   // Update option counts in filter selects
@@ -2694,7 +3025,8 @@ async function fetchLineup(isBackground = false) {
   const ip = state.currentIp;
   if (!ip) {
     if (!isBackground) {
-      lineupTbody.innerHTML = '<tr><td colspan="5" class="empty-state">No HDHomeRun device connected. Please configure a device IP on the <a href="#system" onclick="switchTab(\'system\'); return false;">System</a> tab.</td></tr>';
+      lineupTbody.innerHTML =
+        '<tr><td colspan="5" class="empty-state">No HDHomeRun device connected. Please configure a device IP on the <a href="#system" onclick="switchTab(\'system\'); return false;">System</a> tab.</td></tr>';
     }
     return;
   }
@@ -2703,14 +3035,14 @@ async function fetchLineup(isBackground = false) {
   if (state.deviceInfo?.StorageID && !state.deviceInfo?.TunerCount) {
     state.lineup = [];
     if (lineupCountBadge) {
-      lineupCountBadge.classList.add('hidden');
+      lineupCountBadge.classList.add("hidden");
     }
     if (!isBackground) {
       lineupTbody.innerHTML = `
         <tr>
           <td colspan="5" class="empty-state" style="padding: 32px 16px;">
             <p><strong>Dedicated Storage Engine</strong></p>
-            <p class="text-sm text-muted mt-6">This device (${state.deviceInfo.FriendlyName || 'HDHomeRun RECORD'}) is a DVR recording server and does not host a broadcast channel lineup.</p>
+            <p class="text-sm text-muted mt-6">This device (${state.deviceInfo.FriendlyName || "HDHomeRun RECORD"}) is a DVR recording server and does not host a broadcast channel lineup.</p>
             <p class="text-sm text-muted mt-8">To browse channels or stream live TV, select an HDHomeRun tuner from the device menu in the header.</p>
           </td>
         </tr>`;
@@ -2723,18 +3055,23 @@ async function fetchLineup(isBackground = false) {
   }
 
   if (!isBackground && state.lineup.length === 0) {
-    lineupTbody.innerHTML = '<tr><td colspan="5" class="empty-state">Loading channels...</td></tr>';
+    lineupTbody.innerHTML =
+      '<tr><td colspan="5" class="empty-state">Loading channels...</td></tr>';
   }
 
   lineupFetchPromise = (async () => {
     try {
       // Concurrently fetch lineup with tuning info (for frequencies) and status
-      let lineupRes = await fetch(`http://${ip}/lineup.json?show=found&tuning`).catch(() => null);
+      let lineupRes = await fetch(
+        `http://${ip}/lineup.json?show=found&tuning`,
+      ).catch(() => null);
       if (!lineupRes || !lineupRes.ok) {
         lineupRes = await fetch(`http://${ip}/lineup.json?show=found`);
       }
 
-      const statusRes = await fetch(`http://${ip}/status.json`).catch(() => null);
+      const statusRes = await fetch(`http://${ip}/status.json`).catch(
+        () => null,
+      );
 
       if (!lineupRes.ok) throw new Error(`HTTP ${lineupRes.status}`);
       const lineup = await lineupRes.json();
@@ -2748,11 +3085,11 @@ async function fetchLineup(isBackground = false) {
       }
 
       updateLineupStats();
-      if (state.activeTab === 'lineup' || !isBackground) {
+      if (state.activeTab === "lineup" || !isBackground) {
         renderLineup();
       }
     } catch (err) {
-      console.warn('Error fetching lineup:', err);
+      console.warn("Error fetching lineup:", err);
       if (!isBackground) {
         lineupTbody.innerHTML = `<tr><td colspan="5" class="empty-state error">Failed to load lineup from ${ip}.</td></tr>`;
       }
@@ -2766,70 +3103,81 @@ async function fetchLineup(isBackground = false) {
 
 function setupLineupFilters() {
   if (lineupSearch) {
-    lineupSearch.addEventListener('input', (e) => {
+    lineupSearch.addEventListener("input", (e) => {
       state.filterText = e.target.value.toLowerCase().trim();
       renderLineup();
     });
   }
 
   if (btnLineupFilters && lineupFilterMenu) {
-    btnLineupFilters.addEventListener('click', (e) => {
+    btnLineupFilters.addEventListener("click", (e) => {
       e.stopPropagation();
-      const isHidden = lineupFilterMenu.classList.contains('hidden');
-      lineupFilterMenu.classList.toggle('hidden', !isHidden);
-      btnLineupFilters.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
+      const isHidden = lineupFilterMenu.classList.contains("hidden");
+      lineupFilterMenu.classList.toggle("hidden", !isHidden);
+      btnLineupFilters.setAttribute(
+        "aria-expanded",
+        isHidden ? "true" : "false",
+      );
     });
 
-    document.addEventListener('click', (e) => {
-      if (!lineupFilterMenu.classList.contains('hidden') &&
-          !lineupFilterMenu.contains(e.target) &&
-          !btnLineupFilters.contains(e.target)) {
-        lineupFilterMenu.classList.add('hidden');
-        btnLineupFilters.setAttribute('aria-expanded', 'false');
+    document.addEventListener("click", (e) => {
+      if (
+        !lineupFilterMenu.classList.contains("hidden") &&
+        !lineupFilterMenu.contains(e.target) &&
+        !btnLineupFilters.contains(e.target)
+      ) {
+        lineupFilterMenu.classList.add("hidden");
+        btnLineupFilters.setAttribute("aria-expanded", "false");
       }
     });
   }
 
   const handleFilterChange = () => {
-    state.filters.status = filterStatusSelect?.value || 'allowed';
-    state.filters.band = filterBandSelect?.value || 'all';
-    state.filters.format = filterFormatSelect?.value || 'all';
-    state.filters.drm = filterDrmSelect?.value || 'all';
+    state.filters.status = filterStatusSelect?.value || "allowed";
+    state.filters.band = filterBandSelect?.value || "all";
+    state.filters.format = filterFormatSelect?.value || "all";
+    state.filters.drm = filterDrmSelect?.value || "all";
     renderLineup();
   };
 
-  if (filterStatusSelect) filterStatusSelect.addEventListener('change', handleFilterChange);
-  if (filterBandSelect) filterBandSelect.addEventListener('change', handleFilterChange);
-  if (filterFormatSelect) filterFormatSelect.addEventListener('change', handleFilterChange);
-  if (filterDrmSelect) filterDrmSelect.addEventListener('change', handleFilterChange);
+  if (filterStatusSelect)
+    filterStatusSelect.addEventListener("change", handleFilterChange);
+  if (filterBandSelect)
+    filterBandSelect.addEventListener("change", handleFilterChange);
+  if (filterFormatSelect)
+    filterFormatSelect.addEventListener("change", handleFilterChange);
+  if (filterDrmSelect)
+    filterDrmSelect.addEventListener("change", handleFilterChange);
 
   const resetFilters = () => {
     state.filters = {
-      status: 'allowed',
-      band: 'all',
-      format: 'all',
-      drm: 'all',
+      status: "allowed",
+      band: "all",
+      format: "all",
+      drm: "all",
     };
-    if (filterStatusSelect) filterStatusSelect.value = 'allowed';
-    if (filterBandSelect) filterBandSelect.value = 'all';
-    if (filterFormatSelect) filterFormatSelect.value = 'all';
-    if (filterDrmSelect) filterDrmSelect.value = 'all';
+    if (filterStatusSelect) filterStatusSelect.value = "allowed";
+    if (filterBandSelect) filterBandSelect.value = "all";
+    if (filterFormatSelect) filterFormatSelect.value = "all";
+    if (filterDrmSelect) filterDrmSelect.value = "all";
     renderLineup();
   };
 
-  if (btnResetFilters) btnResetFilters.addEventListener('click', resetFilters);
-  if (btnClearFilters) btnClearFilters.addEventListener('click', resetFilters);
-  if (btnQuickClearFilters) btnQuickClearFilters.addEventListener('click', resetFilters);
+  if (btnResetFilters) btnResetFilters.addEventListener("click", resetFilters);
+  if (btnClearFilters) btnClearFilters.addEventListener("click", resetFilters);
+  if (btnQuickClearFilters)
+    btnQuickClearFilters.addEventListener("click", resetFilters);
 
   if (btnApplyFilters) {
-    btnApplyFilters.addEventListener('click', () => {
-      if (lineupFilterMenu) lineupFilterMenu.classList.add('hidden');
-      if (btnLineupFilters) btnLineupFilters.setAttribute('aria-expanded', 'false');
+    btnApplyFilters.addEventListener("click", () => {
+      if (lineupFilterMenu) lineupFilterMenu.classList.add("hidden");
+      if (btnLineupFilters)
+        btnLineupFilters.setAttribute("aria-expanded", "false");
     });
   }
 
-  if (btnRefreshLineup) btnRefreshLineup.addEventListener('click', fetchLineup);
-  if (btnExportM3u) btnExportM3u.addEventListener('click', exportM3u);
+  if (btnRefreshLineup) btnRefreshLineup.addEventListener("click", fetchLineup);
+  if (btnExportM3u) btnExportM3u.addEventListener("click", exportM3u);
 }
 
 function renderActiveFilterChips() {
@@ -2837,24 +3185,50 @@ function renderActiveFilterChips() {
 
   const chips = [];
 
-  if (state.filters.status !== 'allowed') {
-    const labels = { all: 'All Channels', favorites: 'Favorites ⭐', hidden: 'Hidden ❌' };
-    chips.push({ key: 'status', label: `Status: ${labels[state.filters.status] || state.filters.status}` });
+  if (state.filters.status !== "allowed") {
+    const labels = {
+      all: "All Channels",
+      favorites: "Favorites ⭐",
+      hidden: "Hidden ❌",
+    };
+    chips.push({
+      key: "status",
+      label: `Status: ${labels[state.filters.status] || state.filters.status}`,
+    });
   }
 
-  if (state.filters.band !== 'all') {
-    const labels = { vhf: 'Band: VHF', 'vhf-low': 'Band: VHF-Low', 'vhf-high': 'Band: VHF-High', uhf: 'Band: UHF' };
-    chips.push({ key: 'band', label: labels[state.filters.band] || state.filters.band });
+  if (state.filters.band !== "all") {
+    const labels = {
+      vhf: "Band: VHF",
+      "vhf-low": "Band: VHF-Low",
+      "vhf-high": "Band: VHF-High",
+      uhf: "Band: UHF",
+    };
+    chips.push({
+      key: "band",
+      label: labels[state.filters.band] || state.filters.band,
+    });
   }
 
-  if (state.filters.format !== 'all') {
-    const labels = { atsc3: 'Format: ATSC 3.0', atsc1: 'Format: ATSC 1.0', hd: 'Format: HD', sd: 'Format: SD' };
-    chips.push({ key: 'format', label: labels[state.filters.format] || state.filters.format });
+  if (state.filters.format !== "all") {
+    const labels = {
+      atsc3: "Format: ATSC 3.0",
+      atsc1: "Format: ATSC 1.0",
+      hd: "Format: HD",
+      sd: "Format: SD",
+    };
+    chips.push({
+      key: "format",
+      label: labels[state.filters.format] || state.filters.format,
+    });
   }
 
-  if (state.filters.drm !== 'all') {
-    const labels = { drm: 'DRM: Protected 🔒', nodrm: 'DRM: Clear' };
-    chips.push({ key: 'drm', label: labels[state.filters.drm] || state.filters.drm });
+  if (state.filters.drm !== "all") {
+    const labels = { drm: "DRM: Protected 🔒", nodrm: "DRM: Clear" };
+    chips.push({
+      key: "drm",
+      label: labels[state.filters.drm] || state.filters.drm,
+    });
   }
 
   const count = chips.length;
@@ -2862,58 +3236,64 @@ function renderActiveFilterChips() {
   // Update button badge and styling
   if (lineupFilterActiveCount) {
     lineupFilterActiveCount.textContent = count;
-    lineupFilterActiveCount.classList.toggle('hidden', count === 0);
+    lineupFilterActiveCount.classList.toggle("hidden", count === 0);
   }
   if (btnLineupFilters) {
-    btnLineupFilters.classList.toggle('has-filters', count > 0);
+    btnLineupFilters.classList.toggle("has-filters", count > 0);
   }
   if (btnQuickClearFilters) {
-    btnQuickClearFilters.classList.toggle('hidden', count === 0);
+    btnQuickClearFilters.classList.toggle("hidden", count === 0);
   }
 
   if (count === 0) {
-    lineupActiveChips.classList.add('hidden');
-    lineupActiveChips.innerHTML = '';
+    lineupActiveChips.classList.add("hidden");
+    lineupActiveChips.innerHTML = "";
     return;
   }
 
-  lineupActiveChips.classList.remove('hidden');
-  lineupActiveChips.innerHTML = chips
-    .map(
-      (c) =>
-        `<span class="filter-chip"><span>${c.label}</span><button type="button" class="filter-chip-remove" data-filter-key="${c.key}" title="Remove filter">&times;</button></span>`
-    )
-    .join('') +
+  lineupActiveChips.classList.remove("hidden");
+  lineupActiveChips.innerHTML =
+    chips
+      .map(
+        (c) =>
+          `<span class="filter-chip"><span>${c.label}</span><button type="button" class="filter-chip-remove" data-filter-key="${c.key}" title="Remove filter">&times;</button></span>`,
+      )
+      .join("") +
     `<button type="button" class="filter-chip-clear-all" id="btn-chips-clear-all">Clear All</button>`;
 
-  lineupActiveChips.querySelectorAll('.filter-chip-remove').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const key = btn.getAttribute('data-filter-key');
-      if (key === 'status') {
-        state.filters.status = 'allowed';
-        if (filterStatusSelect) filterStatusSelect.value = 'allowed';
-      } else if (key === 'band') {
-        state.filters.band = 'all';
-        if (filterBandSelect) filterBandSelect.value = 'all';
-      } else if (key === 'format') {
-        state.filters.format = 'all';
-        if (filterFormatSelect) filterFormatSelect.value = 'all';
-      } else if (key === 'drm') {
-        state.filters.drm = 'all';
-        if (filterDrmSelect) filterDrmSelect.value = 'all';
+  lineupActiveChips.querySelectorAll(".filter-chip-remove").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const key = btn.getAttribute("data-filter-key");
+      if (key === "status") {
+        state.filters.status = "allowed";
+        if (filterStatusSelect) filterStatusSelect.value = "allowed";
+      } else if (key === "band") {
+        state.filters.band = "all";
+        if (filterBandSelect) filterBandSelect.value = "all";
+      } else if (key === "format") {
+        state.filters.format = "all";
+        if (filterFormatSelect) filterFormatSelect.value = "all";
+      } else if (key === "drm") {
+        state.filters.drm = "all";
+        if (filterDrmSelect) filterDrmSelect.value = "all";
       }
       renderLineup();
     });
   });
 
-  const clearAllBtn = document.getElementById('btn-chips-clear-all');
+  const clearAllBtn = document.getElementById("btn-chips-clear-all");
   if (clearAllBtn) {
-    clearAllBtn.addEventListener('click', () => {
-      state.filters = { status: 'allowed', band: 'all', format: 'all', drm: 'all' };
-      if (filterStatusSelect) filterStatusSelect.value = 'allowed';
-      if (filterBandSelect) filterBandSelect.value = 'all';
-      if (filterFormatSelect) filterFormatSelect.value = 'all';
-      if (filterDrmSelect) filterDrmSelect.value = 'all';
+    clearAllBtn.addEventListener("click", () => {
+      state.filters = {
+        status: "allowed",
+        band: "all",
+        format: "all",
+        drm: "all",
+      };
+      if (filterStatusSelect) filterStatusSelect.value = "allowed";
+      if (filterBandSelect) filterBandSelect.value = "all";
+      if (filterFormatSelect) filterFormatSelect.value = "all";
+      if (filterDrmSelect) filterDrmSelect.value = "all";
       renderLineup();
     });
   }
@@ -2921,69 +3301,84 @@ function renderActiveFilterChips() {
 
 function renderLineup() {
   const hasAnyScanSignal = (state.lineup || []).some(
-    (ch) => ch.SignalQuality != null || ch.SignalStrength != null
+    (ch) => ch.SignalQuality != null || ch.SignalStrength != null,
   );
-  const signalNoticeEl = document.getElementById('lineup-signal-notice');
+  const signalNoticeEl = document.getElementById("lineup-signal-notice");
   if (signalNoticeEl) {
     if (!hasAnyScanSignal && state.lineup && state.lineup.length > 0) {
-      signalNoticeEl.classList.remove('hidden');
-      const lineupLink = document.getElementById('link-hdhr-web-lineup');
+      signalNoticeEl.classList.remove("hidden");
+      const lineupLink = document.getElementById("link-hdhr-web-lineup");
       if (lineupLink) {
         lineupLink.href = `http://${state.currentIp}/lineup.html`;
       }
     } else {
-      signalNoticeEl.classList.add('hidden');
+      signalNoticeEl.classList.add("hidden");
     }
   }
 
   const filtered = state.lineup.filter((ch) => {
     const station = getStationInfo(ch.GuideName);
     const activeTuner = (state.tuners || []).find(
-      (t) => t.VctNumber && (t.VctNumber === ch.GuideNumber || String(t.VctNumber) === String(ch.GuideNumber))
+      (t) =>
+        t.VctNumber &&
+        (t.VctNumber === ch.GuideNumber ||
+          String(t.VctNumber) === String(ch.GuideNumber)),
     );
-    const rfInfo = getRfChannelInfo(ch.Frequency || (activeTuner && activeTuner.Frequency));
+    const rfInfo = getRfChannelInfo(
+      ch.Frequency || (activeTuner && activeTuner.Frequency),
+    );
 
     // Text search (matches GuideName, GuideNumber, Network, City/State, Band, or RF channel)
     const matchesText =
       !state.filterText ||
       (ch.GuideName && ch.GuideName.toLowerCase().includes(state.filterText)) ||
-      (ch.GuideNumber && ch.GuideNumber.toLowerCase().includes(state.filterText)) ||
-      (rfInfo && (
-        rfInfo.band.toLowerCase().includes(state.filterText) ||
-        rfInfo.bandDetail.toLowerCase().includes(state.filterText) ||
-        `rf ${rfInfo.rf}`.includes(state.filterText) ||
-        `rf${rfInfo.rf}`.includes(state.filterText)
-      )) ||
-      (station && (
-        station.network.toLowerCase().includes(state.filterText) ||
-        station.locality.toLowerCase().includes(state.filterText)
-      ));
+      (ch.GuideNumber &&
+        ch.GuideNumber.toLowerCase().includes(state.filterText)) ||
+      (rfInfo &&
+        (rfInfo.band.toLowerCase().includes(state.filterText) ||
+          rfInfo.bandDetail.toLowerCase().includes(state.filterText) ||
+          `rf ${rfInfo.rf}`.includes(state.filterText) ||
+          `rf${rfInfo.rf}`.includes(state.filterText))) ||
+      (station &&
+        (station.network.toLowerCase().includes(state.filterText) ||
+          station.locality.toLowerCase().includes(state.filterText)));
 
     if (!matchesText) return false;
 
     // Status filter
-    if (state.filters.status === 'allowed' && ch.Enabled === 0) return false;
-    if (state.filters.status === 'hidden' && ch.Enabled !== 0) return false;
-    if (state.filters.status === 'favorites' && ch.Favorite !== 1) return false;
+    if (state.filters.status === "allowed" && ch.Enabled === 0) return false;
+    if (state.filters.status === "hidden" && ch.Enabled !== 0) return false;
+    if (state.filters.status === "favorites" && ch.Favorite !== 1) return false;
 
     // Band filter
-    if (state.filters.band !== 'all') {
+    if (state.filters.band !== "all") {
       if (!rfInfo) return false;
-      if (state.filters.band === 'vhf' && rfInfo.band !== 'VHF') return false;
-      if (state.filters.band === 'vhf-low' && rfInfo.bandDetail !== 'VHF-Low') return false;
-      if (state.filters.band === 'vhf-high' && rfInfo.bandDetail !== 'VHF-High') return false;
-      if (state.filters.band === 'uhf' && rfInfo.band !== 'UHF') return false;
+      if (state.filters.band === "vhf" && rfInfo.band !== "VHF") return false;
+      if (state.filters.band === "vhf-low" && rfInfo.bandDetail !== "VHF-Low")
+        return false;
+      if (state.filters.band === "vhf-high" && rfInfo.bandDetail !== "VHF-High")
+        return false;
+      if (state.filters.band === "uhf" && rfInfo.band !== "UHF") return false;
     }
 
     // Format filter
-    if (state.filters.format === 'atsc3' && !isAtsc3Channel(ch)) return false;
-    if (state.filters.format === 'atsc1' && isAtsc3Channel(ch)) return false;
-    if (state.filters.format === 'hd' && ch.HD !== 1 && !(ch.VideoCodec && ch.VideoCodec.includes('HD'))) return false;
-    if (state.filters.format === 'sd' && (ch.HD === 1 || (ch.VideoCodec && ch.VideoCodec.includes('HD')))) return false;
+    if (state.filters.format === "atsc3" && !isAtsc3Channel(ch)) return false;
+    if (state.filters.format === "atsc1" && isAtsc3Channel(ch)) return false;
+    if (
+      state.filters.format === "hd" &&
+      ch.HD !== 1 &&
+      !(ch.VideoCodec && ch.VideoCodec.includes("HD"))
+    )
+      return false;
+    if (
+      state.filters.format === "sd" &&
+      (ch.HD === 1 || (ch.VideoCodec && ch.VideoCodec.includes("HD")))
+    )
+      return false;
 
     // DRM filter
-    if (state.filters.drm === 'drm' && ch.DRM !== 1) return false;
-    if (state.filters.drm === 'nodrm' && ch.DRM === 1) return false;
+    if (state.filters.drm === "drm" && ch.DRM !== 1) return false;
+    if (state.filters.drm === "nodrm" && ch.DRM === 1) return false;
 
     return true;
   });
@@ -2997,32 +3392,34 @@ function renderLineup() {
         <tr>
           <td colspan="5" class="empty-state" style="padding: 32px 16px;">
             <p><strong>Dedicated Storage Engine</strong></p>
-            <p class="text-sm text-muted mt-6">This device (${state.deviceInfo.FriendlyName || 'HDHomeRun RECORD'}) is a DVR recording server and does not host a broadcast channel lineup.</p>
+            <p class="text-sm text-muted mt-6">This device (${state.deviceInfo.FriendlyName || "HDHomeRun RECORD"}) is a DVR recording server and does not host a broadcast channel lineup.</p>
             <p class="text-sm text-muted mt-8">To browse channels or stream live TV, select an HDHomeRun tuner from the device menu in the header.</p>
           </td>
         </tr>`;
     } else {
-      lineupTbody.innerHTML = '<tr><td colspan="5" class="empty-state">No matching channels found.</td></tr>';
+      lineupTbody.innerHTML =
+        '<tr><td colspan="5" class="empty-state">No matching channels found.</td></tr>';
     }
     return;
   }
 
-  lineupTbody.innerHTML = '';
+  lineupTbody.innerHTML = "";
   filtered.forEach((ch) => {
-    const tr = document.createElement('tr');
-    tr.setAttribute('data-guide-num', ch.GuideNumber);
+    const tr = document.createElement("tr");
+    tr.setAttribute("data-guide-num", ch.GuideNumber);
     const isHd = ch.HD === 1;
     const isHidden = ch.Enabled === 0;
     const isFav = ch.Favorite === 1;
     const isAtsc3 = isAtsc3Channel(ch);
     const isDrm = ch.DRM === 1;
-    const streamUrl = ch.URL || `http://${state.currentIp}:5004/auto/v${ch.GuideNumber}`;
+    const streamUrl =
+      ch.URL || `http://${state.currentIp}:5004/auto/v${ch.GuideNumber}`;
 
     if (isHidden) {
-      tr.className = 'lineup-row-disabled';
+      tr.className = "lineup-row-disabled";
     }
 
-    let statusBadge = '';
+    let statusBadge = "";
     if (isHidden) {
       statusBadge = '<span class="badge badge-disabled">Hidden ❌</span>';
     } else if (isFav) {
@@ -3037,25 +3434,30 @@ function renderLineup() {
 
     const drmBadge = isDrm
       ? '<span class="badge badge-drm" title="Encrypted with ATSC 3.0 DRM">🔒 DRM</span>'
-      : '';
+      : "";
 
     // Check if any physical tuner is currently tuned to this channel
     const activeTuner = (state.tuners || []).find(
-      (t) => t.VctNumber && (t.VctNumber === ch.GuideNumber || String(t.VctNumber) === String(ch.GuideNumber))
+      (t) =>
+        t.VctNumber &&
+        (t.VctNumber === ch.GuideNumber ||
+          String(t.VctNumber) === String(ch.GuideNumber)),
     );
 
-    const rfInfo = getRfChannelInfo(ch.Frequency || (activeTuner && activeTuner.Frequency));
-    let bandBadge = '';
+    const rfInfo = getRfChannelInfo(
+      ch.Frequency || (activeTuner && activeTuner.Frequency),
+    );
+    let bandBadge = "";
     if (rfInfo) {
-      const title = `${rfInfo.bandDetail} (Physical RF ${rfInfo.rf || '—'} • ${rfInfo.freqMhz} MHz)`;
-      bandBadge = `<span class="badge ${rfInfo.band === 'UHF' ? 'badge-uhf' : 'badge-vhf'}" title="${title}">${rfInfo.band}</span>`;
+      const title = `${rfInfo.bandDetail} (Physical RF ${rfInfo.rf || "—"} • ${rfInfo.freqMhz} MHz)`;
+      bandBadge = `<span class="badge ${rfInfo.band === "UHF" ? "badge-uhf" : "badge-vhf"}" title="${title}">${rfInfo.band}</span>`;
     }
 
     // Signal Quality meter (live tuner signal takes precedence over static scan signal)
     const signalHtml = getLineupSignalHtml(ch, activeTuner);
 
     // Actions for channel
-    let actionsHtml = '';
+    let actionsHtml = "";
     if (isDrm) {
       actionsHtml = `
         <button class="btn btn-sm btn-drm-locked" title="ATSC 3.0 DRM Encrypted">
@@ -3073,27 +3475,27 @@ function renderLineup() {
         <button class="btn btn-sm btn-primary btn-copy-url" data-url="${streamUrl}" title="Copy Stream URL to paste into VLC or media player">
           📋 Copy URL
         </button>
-        <button class="btn btn-sm btn-secondary btn-download-m3u" data-num="${ch.GuideNumber}" data-name="${ch.GuideName || ''}" data-url="${streamUrl}" title="Download .m3u stream playlist to open directly in VLC / default player">
+        <button class="btn btn-sm btn-secondary btn-download-m3u" data-num="${ch.GuideNumber}" data-name="${ch.GuideName || ""}" data-url="${streamUrl}" title="Download .m3u stream playlist to open directly in VLC / default player">
           📺 M3U
         </button>
       `;
     } else {
       actionsHtml = `
-        <button class="btn btn-sm btn-play btn-play-channel" data-num="${ch.GuideNumber}" data-name="${ch.GuideName || ''}" data-url="${streamUrl}" title="Watch live ATSC 1.0 broadcast directly in browser">
+        <button class="btn btn-sm btn-play btn-play-channel" data-num="${ch.GuideNumber}" data-name="${ch.GuideName || ""}" data-url="${streamUrl}" title="Watch live ATSC 1.0 broadcast directly in browser">
           ▶ Play
         </button>
         <button class="btn btn-sm btn-primary btn-copy-url" data-url="${streamUrl}" title="Copy Stream URL to paste into VLC or media player">
           📋 Copy URL
         </button>
-        <button class="btn btn-sm btn-secondary btn-download-m3u" data-num="${ch.GuideNumber}" data-name="${ch.GuideName || ''}" data-url="${streamUrl}" title="Download .m3u stream playlist to open directly in VLC / default player">
+        <button class="btn btn-sm btn-secondary btn-download-m3u" data-num="${ch.GuideNumber}" data-name="${ch.GuideName || ""}" data-url="${streamUrl}" title="Download .m3u stream playlist to open directly in VLC / default player">
           📺 M3U
         </button>
       `;
     }
 
     const stationInfo = getStationInfo(ch.GuideName);
-    let logoHtml = '';
-    let localityHtml = '';
+    let logoHtml = "";
+    let localityHtml = "";
 
     if (stationInfo && stationInfo.logo) {
       logoHtml = `<div class="channel-logo-wrap"><img src="${stationInfo.logo}" alt="${stationInfo.network}" class="affiliate-logo" title="${stationInfo.network} • ${stationInfo.locality}" /></div>`;
@@ -3111,13 +3513,15 @@ function renderLineup() {
       <div class="channel-identity">
         ${logoHtml}
         <div class="channel-identity-text">
-          <span class="channel-guide-name">${ch.GuideName || 'Unknown'}</span>
+          <span class="channel-guide-name">${ch.GuideName || "Unknown"}</span>
           ${localityHtml}
         </div>
       </div>
     `;
 
-    const rfSubHtml = rfInfo ? `<div class="channel-rf-sub" title="Physical RF Channel ${rfInfo.rf || '—'} • ${rfInfo.freqMhz} MHz">RF ${rfInfo.rf || '—'}</div>` : '';
+    const rfSubHtml = rfInfo
+      ? `<div class="channel-rf-sub" title="Physical RF Channel ${rfInfo.rf || "—"} • ${rfInfo.freqMhz} MHz">RF ${rfInfo.rf || "—"}</div>`
+      : "";
 
     tr.innerHTML = `
       <td class="channel-num-cell">
@@ -3147,32 +3551,34 @@ function renderLineup() {
   });
 
   // Attach clipboard copy listeners
-  document.querySelectorAll('.btn-copy-url').forEach((btn) => {
-    btn.addEventListener('click', async () => {
-      const url = btn.getAttribute('data-url');
+  document.querySelectorAll(".btn-copy-url").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const url = btn.getAttribute("data-url");
       try {
         await navigator.clipboard.writeText(url);
         const originalText = btn.innerHTML;
-        btn.innerHTML = '✓ Copied!';
+        btn.innerHTML = "✓ Copied!";
         setTimeout(() => (btn.innerHTML = originalText), 1500);
       } catch (err) {
-        console.error('Failed to copy', err);
+        console.error("Failed to copy", err);
       }
     });
   });
 
   // Attach single-channel M3U download listeners
-  document.querySelectorAll('.btn-download-m3u').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const chNum = btn.getAttribute('data-num');
-      const chName = btn.getAttribute('data-name') || `Channel ${chNum}`;
-      const url = btn.getAttribute('data-url');
+  document.querySelectorAll(".btn-download-m3u").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const chNum = btn.getAttribute("data-num");
+      const chName = btn.getAttribute("data-name") || `Channel ${chNum}`;
+      const url = btn.getAttribute("data-url");
       const m3uContent = `#EXTM3U\n#EXTINF:-1 tvg-id="v${chNum}" tvg-name="${chName}",${chName}\n${url}\n`;
-      const blob = new Blob([m3uContent], { type: 'audio/x-mpegurl;charset=utf-8' });
+      const blob = new Blob([m3uContent], {
+        type: "audio/x-mpegurl;charset=utf-8",
+      });
       const downloadUrl = URL.createObjectURL(blob);
-      const a = document.createElement('a');
+      const a = document.createElement("a");
       a.href = downloadUrl;
-      const cleanName = chName.replace(/[^a-zA-Z0-9_-]/g, '_');
+      const cleanName = chName.replace(/[^a-zA-Z0-9_-]/g, "_");
       a.download = `${cleanName}-${chNum}.m3u`;
       document.body.appendChild(a);
       a.click();
@@ -3182,11 +3588,11 @@ function renderLineup() {
   });
 
   // Attach single-channel Play listeners
-  document.querySelectorAll('.btn-play-channel').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const chNum = btn.getAttribute('data-num');
-      const chName = btn.getAttribute('data-name') || `Channel ${chNum}`;
-      const url = btn.getAttribute('data-url');
+  document.querySelectorAll(".btn-play-channel").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const chNum = btn.getAttribute("data-num");
+      const chName = btn.getAttribute("data-name") || `Channel ${chNum}`;
+      const url = btn.getAttribute("data-url");
       openPlayer(chNum, chName, url);
     });
   });
@@ -3194,20 +3600,21 @@ function renderLineup() {
 
 function exportM3u() {
   if (!state.lineup || state.lineup.length === 0) {
-    alert('No channels in lineup to export.');
+    alert("No channels in lineup to export.");
     return;
   }
 
-  let m3u = '#EXTM3U\n';
+  let m3u = "#EXTM3U\n";
   state.lineup.forEach((ch) => {
-    const streamUrl = ch.URL || `http://${state.currentIp}:5004/auto/v${ch.GuideNumber}`;
+    const streamUrl =
+      ch.URL || `http://${state.currentIp}:5004/auto/v${ch.GuideNumber}`;
     m3u += `#EXTINF:-1 tvg-id="${ch.GuideNumber}" tvg-name="${ch.GuideName}" tvg-chno="${ch.GuideNumber}", ${ch.GuideName}\n`;
     m3u += `${streamUrl}\n`;
   });
 
-  const blob = new Blob([m3u], { type: 'application/x-mpegurl' });
+  const blob = new Blob([m3u], { type: "application/x-mpegurl" });
   const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
+  const a = document.createElement("a");
   a.href = url;
   a.download = `hdhomerun_lineup_${state.currentIp}.m3u`;
   document.body.appendChild(a);
@@ -3222,10 +3629,10 @@ function exportM3u() {
 
 function setupDvrPills() {
   dvrViewPills.forEach((pill) => {
-    pill.addEventListener('click', () => {
-      dvrViewPills.forEach((p) => p.classList.remove('active'));
-      pill.classList.add('active');
-      state.dvrSubView = pill.getAttribute('data-dvr-view');
+    pill.addEventListener("click", () => {
+      dvrViewPills.forEach((p) => p.classList.remove("active"));
+      pill.classList.add("active");
+      state.dvrSubView = pill.getAttribute("data-dvr-view");
       state.selectedSeriesId = null;
       renderCurrentDvrSubView();
     });
@@ -3233,55 +3640,77 @@ function setupDvrPills() {
 }
 
 function updateStorageBar() {
-  if (state.deviceInfo?.TotalSpace && typeof state.deviceInfo?.FreeSpace === 'number') {
-    if (dvrStorageBarCard) dvrStorageBarCard.classList.remove('hidden');
-    const totalGb = (state.deviceInfo.TotalSpace / (1024 * 1024 * 1024)).toFixed(1);
-    const freeGb = (state.deviceInfo.FreeSpace / (1024 * 1024 * 1024)).toFixed(1);
+  if (
+    state.deviceInfo?.TotalSpace &&
+    typeof state.deviceInfo?.FreeSpace === "number"
+  ) {
+    if (dvrStorageBarCard) dvrStorageBarCard.classList.remove("hidden");
+    const totalGb = (
+      state.deviceInfo.TotalSpace /
+      (1024 * 1024 * 1024)
+    ).toFixed(1);
+    const freeGb = (state.deviceInfo.FreeSpace / (1024 * 1024 * 1024)).toFixed(
+      1,
+    );
     const usedBytes = state.deviceInfo.TotalSpace - state.deviceInfo.FreeSpace;
     const usedGb = (usedBytes / (1024 * 1024 * 1024)).toFixed(1);
-    const usedPercent = Math.round((usedBytes / state.deviceInfo.TotalSpace) * 100);
+    const usedPercent = Math.round(
+      (usedBytes / state.deviceInfo.TotalSpace) * 100,
+    );
 
-    if (storageSpaceText) storageSpaceText.textContent = `${freeGb} GB free of ${totalGb} GB (${usedPercent}% used)`;
+    if (storageSpaceText)
+      storageSpaceText.textContent = `${freeGb} GB free of ${totalGb} GB (${usedPercent}% used)`;
     if (storageBarFill) {
       storageBarFill.style.width = `${usedPercent}%`;
       if (usedPercent > 90) {
-        storageBarFill.className = 'metric-bar-fill poor';
+        storageBarFill.className = "metric-bar-fill poor";
       } else if (usedPercent > 75) {
-        storageBarFill.className = 'metric-bar-fill fair';
+        storageBarFill.className = "metric-bar-fill fair";
       } else {
-        storageBarFill.className = 'metric-bar-fill good';
+        storageBarFill.className = "metric-bar-fill good";
       }
     }
   } else {
-    if (dvrStorageBarCard) dvrStorageBarCard.classList.add('hidden');
+    if (dvrStorageBarCard) dvrStorageBarCard.classList.add("hidden");
   }
 }
 
 function renderSystemStorage() {
   if (!infoStorage) return;
 
-  if (state.deviceInfo?.TotalSpace && typeof state.deviceInfo?.FreeSpace === 'number') {
-    const totalGb = (state.deviceInfo.TotalSpace / (1024 * 1024 * 1024)).toFixed(1);
-    const freeGb = (state.deviceInfo.FreeSpace / (1024 * 1024 * 1024)).toFixed(1);
+  if (
+    state.deviceInfo?.TotalSpace &&
+    typeof state.deviceInfo?.FreeSpace === "number"
+  ) {
+    const totalGb = (
+      state.deviceInfo.TotalSpace /
+      (1024 * 1024 * 1024)
+    ).toFixed(1);
+    const freeGb = (state.deviceInfo.FreeSpace / (1024 * 1024 * 1024)).toFixed(
+      1,
+    );
     const usedBytes = state.deviceInfo.TotalSpace - state.deviceInfo.FreeSpace;
     const usedGb = (usedBytes / (1024 * 1024 * 1024)).toFixed(1);
-    const usedPercent = Math.round((usedBytes / state.deviceInfo.TotalSpace) * 100);
+    const usedPercent = Math.round(
+      (usedBytes / state.deviceInfo.TotalSpace) * 100,
+    );
 
     infoStorage.innerHTML = `<span><strong>${freeGb} GB free</strong> of ${totalGb} GB (${usedPercent}% used)</span>`;
     if (infoStorageBarWrap && infoStorageBarFill) {
-      infoStorageBarWrap.classList.remove('hidden');
+      infoStorageBarWrap.classList.remove("hidden");
       infoStorageBarFill.style.width = `${usedPercent}%`;
       if (usedPercent > 90) {
-        infoStorageBarFill.style.backgroundColor = '#ef4444';
+        infoStorageBarFill.style.backgroundColor = "#ef4444";
       } else if (usedPercent > 75) {
-        infoStorageBarFill.style.backgroundColor = '#f59e0b';
+        infoStorageBarFill.style.backgroundColor = "#f59e0b";
       } else {
-        infoStorageBarFill.style.backgroundColor = '#10b981';
+        infoStorageBarFill.style.backgroundColor = "#10b981";
       }
     }
   } else {
-    infoStorage.innerHTML = '<span class="text-muted" style="font-weight: normal;">None detected</span>';
-    if (infoStorageBarWrap) infoStorageBarWrap.classList.add('hidden');
+    infoStorage.innerHTML =
+      '<span class="text-muted" style="font-weight: normal;">None detected</span>';
+    if (infoStorageBarWrap) infoStorageBarWrap.classList.add("hidden");
   }
 }
 
@@ -3309,8 +3738,8 @@ async function refreshStorageUsage() {
   endpointsToTry.push(`http://${ip}/discover.json`);
 
   // 3. If port is not 4999, also check port 4999 on the same host
-  if (!ip.includes(':4999')) {
-    const hostWithoutPort = ip.split(':')[0];
+  if (!ip.includes(":4999")) {
+    const hostWithoutPort = ip.split(":")[0];
     endpointsToTry.push(`http://${hostWithoutPort}:4999/discover.json`);
   }
 
@@ -3318,11 +3747,12 @@ async function refreshStorageUsage() {
 
   for (const endpoint of uniqueEndpoints) {
     try {
-      const cacheBustUrl = endpoint + (endpoint.includes('?') ? '&' : '?') + `_t=${Date.now()}`;
-      const res = await fetch(cacheBustUrl, { cache: 'no-cache' });
+      const cacheBustUrl =
+        endpoint + (endpoint.includes("?") ? "&" : "?") + `_t=${Date.now()}`;
+      const res = await fetch(cacheBustUrl, { cache: "no-cache" });
       if (res.ok) {
         const data = await res.json();
-        if (data.TotalSpace && typeof data.FreeSpace === 'number') {
+        if (data.TotalSpace && typeof data.FreeSpace === "number") {
           state.deviceInfo = {
             ...state.deviceInfo,
             TotalSpace: data.TotalSpace,
@@ -3345,9 +3775,12 @@ async function refreshStorageUsage() {
 }
 
 function getDvrRecordedFilesUrl(ip) {
-  let targetUrl = state.dvrStorageUrl || state.deviceInfo?.StorageURL || (ip ? `http://${ip}/recorded_files.json` : '');
-  if (targetUrl && !targetUrl.includes('.json')) {
-    targetUrl = targetUrl.replace(/\/+$/, '') + '/recorded_files.json';
+  let targetUrl =
+    state.dvrStorageUrl ||
+    state.deviceInfo?.StorageURL ||
+    (ip ? `http://${ip}/recorded_files.json` : "");
+  if (targetUrl && !targetUrl.includes(".json")) {
+    targetUrl = targetUrl.replace(/\/+$/, "") + "/recorded_files.json";
   }
   return targetUrl;
 }
@@ -3365,9 +3798,10 @@ async function fetchRecordings(isBackground = false) {
     return;
   }
   if (!isBackground) {
-    recordingsContainer.innerHTML = '<div class="loading-placeholder">Loading DVR recordings and rules...</div>';
+    recordingsContainer.innerHTML =
+      '<div class="loading-placeholder">Loading DVR recordings and rules...</div>';
   }
-  dvrNotDetected.classList.add('hidden');
+  dvrNotDetected.classList.add("hidden");
 
   let targetUrl = getDvrRecordedFilesUrl(ip);
 
@@ -3391,7 +3825,7 @@ async function fetchRecordings(isBackground = false) {
 
     const seriesData = await res.json();
     if (!Array.isArray(seriesData)) {
-      throw new Error('Unexpected DVR response format');
+      throw new Error("Unexpected DVR response format");
     }
 
     state.hasDvr = true;
@@ -3411,7 +3845,7 @@ async function fetchRecordings(isBackground = false) {
             return Array.isArray(epJson) ? epJson : [];
           }
         } catch (e) {
-          console.warn('Could not fetch episodes for', item.Title, e);
+          console.warn("Could not fetch episodes for", item.Title, e);
         }
       } else if (item.PlayURL || item.CmdURL) {
         return [item];
@@ -3426,7 +3860,7 @@ async function fetchRecordings(isBackground = false) {
     state.episodes = allEpisodes;
     episodesCountPill.textContent = allEpisodes.length;
     recordingsCountBadge.textContent = allEpisodes.length;
-    recordingsCountBadge.classList.remove('hidden');
+    recordingsCountBadge.classList.remove("hidden");
 
     // Also fetch scheduled recording rules from Cloud API using DeviceAuth
     await fetchScheduledRules();
@@ -3439,26 +3873,27 @@ async function fetchRecordings(isBackground = false) {
         if (Array.isArray(statusItems)) {
           state.tuners = statusItems;
           parseDeviceStatus(statusItems, ip);
-          if (state.activeTab === 'system') {
+          if (state.activeTab === "system") {
             updateSystemLiveStatus();
           }
         }
       }
     } catch (e) {
-      console.warn('Could not fetch status for DVR playback info:', e);
+      console.warn("Could not fetch status for DVR playback info:", e);
     }
 
     renderCurrentDvrSubView();
   } catch (err) {
-    console.info('No DVR engine found or request failed:', err.message);
+    console.info("No DVR engine found or request failed:", err.message);
     state.hasDvr = false;
     state.series = [];
     state.episodes = [];
-    if (recordingsCountBadge) recordingsCountBadge.classList.add('hidden');
+    if (recordingsCountBadge) recordingsCountBadge.classList.add("hidden");
     if (!isBackground) {
-      if (recordingsContainer) recordingsContainer.innerHTML = '';
-      if (dvrNotDetected) dvrNotDetected.classList.remove('hidden');
-      if (dvrEngineInfo) dvrEngineInfo.textContent = 'No recording engine detected';
+      if (recordingsContainer) recordingsContainer.innerHTML = "";
+      if (dvrNotDetected) dvrNotDetected.classList.remove("hidden");
+      if (dvrEngineInfo)
+        dvrEngineInfo.textContent = "No recording engine detected";
     }
   }
 }
@@ -3466,14 +3901,16 @@ async function fetchRecordings(isBackground = false) {
 async function fetchScheduledRules() {
   if (!state.deviceInfo?.DeviceAuth) return;
   try {
-    const res = await fetch(`https://api.hdhomerun.com/api/recording_rules?DeviceAuth=${state.deviceInfo.DeviceAuth}`);
+    const res = await fetch(
+      `https://api.hdhomerun.com/api/recording_rules?DeviceAuth=${state.deviceInfo.DeviceAuth}`,
+    );
     if (res.ok) {
       const rules = await res.json();
       state.rules = Array.isArray(rules) ? rules : [];
       rulesCountPill.textContent = state.rules.length;
     }
   } catch (e) {
-    console.warn('Could not load scheduled recording rules:', e);
+    console.warn("Could not load scheduled recording rules:", e);
   }
 }
 
@@ -3481,16 +3918,16 @@ function renderCurrentDvrSubView() {
   if (!state.hasDvr) return;
 
   switch (state.dvrSubView) {
-    case 'episodes':
+    case "episodes":
       const epsToRender = state.selectedSeriesId
         ? state.episodes.filter((ep) => ep.SeriesID === state.selectedSeriesId)
         : state.episodes;
       renderEpisodes(epsToRender);
       break;
-    case 'series':
+    case "series":
       renderSeries(state.series);
       break;
-    case 'rules':
+    case "rules":
       renderRules(state.rules);
       break;
   }
@@ -3509,12 +3946,19 @@ function renderEpisodes(episodes) {
           </div>
         </div>
       `;
-      recordingsContainer.querySelector('.btn-back-to-series')?.addEventListener('click', () => {
-        state.selectedSeriesId = null;
-        dvrViewPills.forEach((p) => p.classList.toggle('active', p.getAttribute('data-dvr-view') === 'series'));
-        state.dvrSubView = 'series';
-        renderCurrentDvrSubView();
-      });
+      recordingsContainer
+        .querySelector(".btn-back-to-series")
+        ?.addEventListener("click", () => {
+          state.selectedSeriesId = null;
+          dvrViewPills.forEach((p) =>
+            p.classList.toggle(
+              "active",
+              p.getAttribute("data-dvr-view") === "series",
+            ),
+          );
+          state.dvrSubView = "series";
+          renderCurrentDvrSubView();
+        });
       return;
     }
     recordingsContainer.innerHTML = `
@@ -3527,74 +3971,100 @@ function renderEpisodes(episodes) {
     return;
   }
 
-  recordingsContainer.innerHTML = '';
+  recordingsContainer.innerHTML = "";
 
   if (state.selectedSeriesId) {
-    const sObj = state.series.find((s) => s.SeriesID === state.selectedSeriesId);
-    const seriesTitle = sObj?.Title || episodes[0]?.Title || 'Series';
-    const headerBar = document.createElement('div');
-    headerBar.className = 'dvr-series-header-bar';
+    const sObj = state.series.find(
+      (s) => s.SeriesID === state.selectedSeriesId,
+    );
+    const seriesTitle = sObj?.Title || episodes[0]?.Title || "Series";
+    const headerBar = document.createElement("div");
+    headerBar.className = "dvr-series-header-bar";
     headerBar.innerHTML = `
       <button class="btn btn-sm btn-secondary btn-back-to-series">← All Series</button>
       <span style="font-weight: 600; font-size: 0.95rem;">Series: ${seriesTitle}</span>
-      <span class="text-sm text-muted">(${episodes.length} episode${episodes.length === 1 ? '' : 's'})</span>
+      <span class="text-sm text-muted">(${episodes.length} episode${episodes.length === 1 ? "" : "s"})</span>
     `;
-    headerBar.querySelector('.btn-back-to-series')?.addEventListener('click', () => {
-      state.selectedSeriesId = null;
-      dvrViewPills.forEach((p) => p.classList.toggle('active', p.getAttribute('data-dvr-view') === 'series'));
-      state.dvrSubView = 'series';
-      renderCurrentDvrSubView();
-    });
+    headerBar
+      .querySelector(".btn-back-to-series")
+      ?.addEventListener("click", () => {
+        state.selectedSeriesId = null;
+        dvrViewPills.forEach((p) =>
+          p.classList.toggle(
+            "active",
+            p.getAttribute("data-dvr-view") === "series",
+          ),
+        );
+        state.dvrSubView = "series";
+        renderCurrentDvrSubView();
+      });
     recordingsContainer.appendChild(headerBar);
   }
   episodes.forEach((ep, epIndex) => {
-    const card = document.createElement('div');
+    const card = document.createElement("div");
     card._episodeData = ep;
-    card.setAttribute('data-ep-index', epIndex);
+    card.setAttribute("data-ep-index", epIndex);
 
     // Check if this episode is currently playing back
-    const matchingPlaybacks = (state.activePlaybacks || []).filter((pb) => isEpisodeMatchingPlayback(ep, pb));
+    const matchingPlaybacks = (state.activePlaybacks || []).filter((pb) =>
+      isEpisodeMatchingPlayback(ep, pb),
+    );
     const isPlaying = matchingPlaybacks.length > 0;
-    card.className = `recording-card ${isPlaying ? 'is-playing' : ''}`;
+    card.className = `recording-card ${isPlaying ? "is-playing" : ""}`;
 
-    const recordedDate = ep.StartTime ? new Date(ep.StartTime * 1000).toLocaleDateString() : '—';
-    const durationSec = (ep.EndTime && ep.StartTime) ? (ep.EndTime - ep.StartTime) : (ep.Duration || 0);
-    const durationMin = durationSec > 0 ? Math.round(durationSec / 60) + ' min' : (ep.Duration ? Math.round(ep.Duration / 60) + ' min' : '—');
+    const recordedDate = ep.StartTime
+      ? new Date(ep.StartTime * 1000).toLocaleDateString()
+      : "—";
+    const durationSec =
+      ep.EndTime && ep.StartTime ? ep.EndTime - ep.StartTime : ep.Duration || 0;
+    const durationMin =
+      durationSec > 0
+        ? Math.round(durationSec / 60) + " min"
+        : ep.Duration
+          ? Math.round(ep.Duration / 60) + " min"
+          : "—";
     const playUrl = ep.PlayURL || ep.CmdURL;
-    const posterUrl = ep.ImageURL || 'icon.svg';
+    const posterUrl = ep.ImageURL || "icon.svg";
 
-    let channelDisplay = '';
+    let channelDisplay = "";
     if (ep.ChannelName || ep.ChannelNumber) {
       channelDisplay = `
         <span class="channel-tag">
-          ${ep.ChannelImageURL ? `<img src="${ep.ChannelImageURL}" class="channel-logo-img" alt="" />` : ''}
-          ${ep.ChannelName || ''} ${ep.ChannelNumber || ''}
+          ${ep.ChannelImageURL ? `<img src="${ep.ChannelImageURL}" class="channel-logo-img" alt="" />` : ""}
+          ${ep.ChannelName || ""} ${ep.ChannelNumber || ""}
         </span>
       `;
     }
 
     // Determine initial file size display
-    let sizeDisplay = '';
-    const rawBytes = ep.FileSize || ep.FileSizeBytes || ep.Bytes || ep.Size || ep.RecordSize;
+    let sizeDisplay = "";
+    const rawBytes =
+      ep.FileSize || ep.FileSizeBytes || ep.Bytes || ep.Size || ep.RecordSize;
     if (rawBytes) {
       const gb = (rawBytes / (1024 * 1024 * 1024)).toFixed(2);
       sizeDisplay = `💾 ${gb} GB`;
     } else if (durationSec > 0) {
-      const isAtsc3 = (ep.ChannelNumber && String(ep.ChannelNumber).startsWith('10')) || (ep.ChannelName && ep.ChannelName.includes('4K'));
+      const isAtsc3 =
+        (ep.ChannelNumber && String(ep.ChannelNumber).startsWith("10")) ||
+        (ep.ChannelName && ep.ChannelName.includes("4K"));
       const estBitrate = isAtsc3 ? 6000000 : 12000000;
       const estBytes = (durationSec * estBitrate) / 8;
       const estGb = (estBytes / (1024 * 1024 * 1024)).toFixed(1);
       sizeDisplay = `💾 ~${estGb} GB`;
     }
 
-    const filenameParts = [ep.Title || 'Recording'];
+    const filenameParts = [ep.Title || "Recording"];
     if (ep.EpisodeNumber) filenameParts.push(ep.EpisodeNumber);
     if (ep.EpisodeTitle) filenameParts.push(ep.EpisodeTitle);
-    const suggestedFilename = filenameParts.join(' - ').replace(/[^a-zA-Z0-9_\- ]/g, '_').trim() + '.mpg';
+    const suggestedFilename =
+      filenameParts
+        .join(" - ")
+        .replace(/[^a-zA-Z0-9_\- ]/g, "_")
+        .trim() + ".mpg";
 
-    let playingDisplay = '';
+    let playingDisplay = "";
     if (isPlaying) {
-      const clientIps = matchingPlaybacks.map((p) => p.ip).join(', ');
+      const clientIps = matchingPlaybacks.map((p) => p.ip).join(", ");
       playingDisplay = `
         <span class="badge badge-playing" title="Streaming playback to ${clientIps}">
           ▶️ Playing (${clientIps})
@@ -3604,11 +4074,11 @@ function renderEpisodes(episodes) {
 
     card.innerHTML = `
       <div class="recording-top">
-        <img src="${posterUrl}" class="recording-poster" alt="${ep.Title || 'Show'}" loading="lazy" onerror="this.src='icon.svg'" />
+        <img src="${posterUrl}" class="recording-poster" alt="${ep.Title || "Show"}" loading="lazy" onerror="this.src='icon.svg'" />
         <div class="recording-body">
-          <h4 class="recording-title">${ep.Title || 'Untitled Recording'}</h4>
-          ${ep.EpisodeTitle ? `<p class="recording-episode">${ep.EpisodeNumber ? ep.EpisodeNumber + ': ' : ''}${ep.EpisodeTitle}</p>` : ''}
-          ${ep.Synopsis ? `<p class="recording-synopsis" title="${ep.Synopsis}">${ep.Synopsis}</p>` : ''}
+          <h4 class="recording-title">${ep.Title || "Untitled Recording"}</h4>
+          ${ep.EpisodeTitle ? `<p class="recording-episode">${ep.EpisodeNumber ? ep.EpisodeNumber + ": " : ""}${ep.EpisodeTitle}</p>` : ""}
+          ${ep.Synopsis ? `<p class="recording-synopsis" title="${ep.Synopsis}">${ep.Synopsis}</p>` : ""}
         </div>
       </div>
 
@@ -3616,28 +4086,36 @@ function renderEpisodes(episodes) {
         ${playingDisplay}
         <span class="recording-meta-item">📅 ${recordedDate}</span>
         <span class="recording-meta-item">⏱️ ${durationMin}</span>
-        ${sizeDisplay ? `<span class="recording-meta-item" id="ep-size-${epIndex}"><strong>${sizeDisplay}</strong></span>` : ''}
+        ${sizeDisplay ? `<span class="recording-meta-item" id="ep-size-${epIndex}"><strong>${sizeDisplay}</strong></span>` : ""}
         ${channelDisplay}
-        ${ep.RecordSuccess === 1 ? '<span class="badge badge-hd">Complete</span>' : ''}
+        ${ep.RecordSuccess === 1 ? '<span class="badge badge-hd">Complete</span>' : ""}
       </div>
 
       <div class="recording-actions">
-        ${playUrl ? `
+        ${
+          playUrl
+            ? `
           <a href="${playUrl}" download="${suggestedFilename}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-primary" title="Download the full recorded video file (${suggestedFilename})">
             ⬇️ Download (.mpg)
           </a>
           <button class="btn btn-sm btn-secondary btn-copy-url" data-url="${playUrl}" title="Copy direct download link (for curl, wget, or download managers)">
             📋 Copy Link
           </button>
-          <button class="btn btn-sm btn-secondary btn-download-m3u" data-num="${ep.GuideNumber || ep.ChannelNumber || ''}" data-name="${suggestedFilename.replace(/\.mpg$/, '')}" data-url="${playUrl}" title="Stream immediately in VLC via .m3u without downloading the full file">
+          <button class="btn btn-sm btn-secondary btn-download-m3u" data-num="${ep.GuideNumber || ep.ChannelNumber || ""}" data-name="${suggestedFilename.replace(/\.mpg$/, "")}" data-url="${playUrl}" title="Stream immediately in VLC via .m3u without downloading the full file">
             📺 Stream (M3U)
           </button>
-        ` : ''}
-        ${ep.CmdURL ? `
+        `
+            : ""
+        }
+        ${
+          ep.CmdURL
+            ? `
           <button class="btn btn-sm btn-secondary btn-delete-recording" data-cmd-url="${ep.CmdURL}" title="Delete Recording" aria-label="Delete Recording">
             🗑️
           </button>
-        ` : ''}
+        `
+            : ""
+        }
       </div>
     `;
 
@@ -3645,9 +4123,9 @@ function renderEpisodes(episodes) {
 
     // Asynchronously query HEAD on playUrl to get exact Content-Length if available
     if (!rawBytes && playUrl) {
-      fetch(playUrl, { method: 'HEAD' })
+      fetch(playUrl, { method: "HEAD" })
         .then((res) => {
-          const cl = res.headers.get('content-length');
+          const cl = res.headers.get("content-length");
           if (cl) {
             const bytes = parseInt(cl, 10);
             ep.FileSize = bytes;
@@ -3663,32 +4141,34 @@ function renderEpisodes(episodes) {
   });
 
   // Attach clipboard copy listeners
-  recordingsContainer.querySelectorAll('.btn-copy-url').forEach((btn) => {
-    btn.addEventListener('click', async () => {
-      const url = btn.getAttribute('data-url');
+  recordingsContainer.querySelectorAll(".btn-copy-url").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const url = btn.getAttribute("data-url");
       try {
         await navigator.clipboard.writeText(url);
         const originalText = btn.innerHTML;
-        btn.innerHTML = '✓ Copied!';
+        btn.innerHTML = "✓ Copied!";
         setTimeout(() => (btn.innerHTML = originalText), 1500);
       } catch (err) {
-        console.error('Failed to copy', err);
+        console.error("Failed to copy", err);
       }
     });
   });
 
   // Attach single-episode M3U download listeners
-  recordingsContainer.querySelectorAll('.btn-download-m3u').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const chNum = btn.getAttribute('data-num');
-      const name = btn.getAttribute('data-name') || 'Recording';
-      const url = btn.getAttribute('data-url');
+  recordingsContainer.querySelectorAll(".btn-download-m3u").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const chNum = btn.getAttribute("data-num");
+      const name = btn.getAttribute("data-name") || "Recording";
+      const url = btn.getAttribute("data-url");
       const m3uContent = `#EXTM3U\n#EXTINF:-1 tvg-id="${chNum}" tvg-name="${name}",${name}\n${url}\n`;
-      const blob = new Blob([m3uContent], { type: 'audio/x-mpegurl;charset=utf-8' });
+      const blob = new Blob([m3uContent], {
+        type: "audio/x-mpegurl;charset=utf-8",
+      });
       const downloadUrl = URL.createObjectURL(blob);
-      const a = document.createElement('a');
+      const a = document.createElement("a");
       a.href = downloadUrl;
-      const cleanName = name.replace(/[^a-zA-Z0-9_-]/g, '_');
+      const cleanName = name.replace(/[^a-zA-Z0-9_-]/g, "_");
       a.download = `${cleanName}.m3u`;
       document.body.appendChild(a);
       a.click();
@@ -3698,26 +4178,31 @@ function renderEpisodes(episodes) {
   });
 
   // Attach delete recording listeners
-  recordingsContainer.querySelectorAll('.btn-delete-recording').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const cmdUrl = btn.getAttribute('data-cmd-url');
-      const ep = state.episodes.find((e) => e.CmdURL === cmdUrl);
-      if (!ep) return;
+  recordingsContainer
+    .querySelectorAll(".btn-delete-recording")
+    .forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const cmdUrl = btn.getAttribute("data-cmd-url");
+        const ep = state.episodes.find((e) => e.CmdURL === cmdUrl);
+        if (!ep) return;
 
-      const title = ep.EpisodeTitle ? `${ep.Title}: ${ep.EpisodeTitle}` : (ep.Title || 'this recording');
-      const needConfirm = localStorage.getItem(STORAGE_CONFIRM_DELETE) !== 'false';
+        const title = ep.EpisodeTitle
+          ? `${ep.Title}: ${ep.EpisodeTitle}`
+          : ep.Title || "this recording";
+        const needConfirm =
+          localStorage.getItem(STORAGE_CONFIRM_DELETE) !== "false";
 
-      if (needConfirm) {
-        showDeleteConfirmModal({
-          title: 'Delete Recording',
-          message: `Are you sure you want to permanently delete "${title}"? This cannot be undone and will remove the file from your storage drive.`,
-          onConfirm: () => deleteEpisode(ep),
-        });
-      } else {
-        deleteEpisode(ep);
-      }
+        if (needConfirm) {
+          showDeleteConfirmModal({
+            title: "Delete Recording",
+            message: `Are you sure you want to permanently delete "${title}"? This cannot be undone and will remove the file from your storage drive.`,
+            onConfirm: () => deleteEpisode(ep),
+          });
+        } else {
+          deleteEpisode(ep);
+        }
+      });
     });
-  });
 }
 
 function renderSeries(seriesList) {
@@ -3732,95 +4217,120 @@ function renderSeries(seriesList) {
     return;
   }
 
-  recordingsContainer.innerHTML = '';
+  recordingsContainer.innerHTML = "";
   seriesList.forEach((s) => {
-    const card = document.createElement('div');
+    const card = document.createElement("div");
 
     // Count matching episodes
-    const matchEpisodes = state.episodes.filter((ep) => ep.SeriesID === s.SeriesID);
+    const matchEpisodes = state.episodes.filter(
+      (ep) => ep.SeriesID === s.SeriesID,
+    );
     const matchCount = matchEpisodes.length;
 
     // Check if any episode in this series is currently playing
     const hasPlayingEp = matchEpisodes.some((ep) =>
-      (state.activePlaybacks || []).some((pb) => isEpisodeMatchingPlayback(ep, pb))
+      (state.activePlaybacks || []).some((pb) =>
+        isEpisodeMatchingPlayback(ep, pb),
+      ),
     );
-    card.className = `recording-card ${hasPlayingEp ? 'is-playing' : ''}`;
-    const posterUrl = s.ImageURL || 'icon.svg';
-    const recordedDate = s.StartTime ? new Date(s.StartTime * 1000).toLocaleDateString() : '—';
+    card.className = `recording-card ${hasPlayingEp ? "is-playing" : ""}`;
+    const posterUrl = s.ImageURL || "icon.svg";
+    const recordedDate = s.StartTime
+      ? new Date(s.StartTime * 1000).toLocaleDateString()
+      : "—";
 
     // Calculate total size for series
     let seriesTotalGb = 0;
     matchEpisodes.forEach((ep) => {
-      const b = ep.FileSize || ep.FileSizeBytes || ep.Bytes || ep.Size || ep.RecordSize;
+      const b =
+        ep.FileSize || ep.FileSizeBytes || ep.Bytes || ep.Size || ep.RecordSize;
       if (b) {
         seriesTotalGb += b / (1024 * 1024 * 1024);
       } else {
-        const dSec = (ep.EndTime && ep.StartTime) ? (ep.EndTime - ep.StartTime) : (ep.Duration || 0);
+        const dSec =
+          ep.EndTime && ep.StartTime
+            ? ep.EndTime - ep.StartTime
+            : ep.Duration || 0;
         if (dSec > 0) {
-          const isAtsc3 = (ep.ChannelNumber && String(ep.ChannelNumber).startsWith('10')) || (ep.ChannelName && ep.ChannelName.includes('4K'));
+          const isAtsc3 =
+            (ep.ChannelNumber && String(ep.ChannelNumber).startsWith("10")) ||
+            (ep.ChannelName && ep.ChannelName.includes("4K"));
           const estBitrate = isAtsc3 ? 6000000 : 12000000;
           seriesTotalGb += (dSec * estBitrate) / 8 / (1024 * 1024 * 1024);
         }
       }
     });
-    const sizeDisplay = seriesTotalGb > 0 ? `💾 ~${seriesTotalGb.toFixed(1)} GB` : '';
+    const sizeDisplay =
+      seriesTotalGb > 0 ? `💾 ~${seriesTotalGb.toFixed(1)} GB` : "";
 
     card.innerHTML = `
       <div class="recording-top">
-        <img src="${posterUrl}" class="recording-poster" alt="${s.Title || 'Series'}" loading="lazy" onerror="this.src='icon.svg'" />
+        <img src="${posterUrl}" class="recording-poster" alt="${s.Title || "Series"}" loading="lazy" onerror="this.src='icon.svg'" />
         <div class="recording-body">
-          <h4 class="recording-title">${s.Title || 'Untitled Series'}</h4>
-          <p class="text-sm text-muted">Category: <strong style="text-transform: capitalize;">${s.Category || 'General'}</strong></p>
+          <h4 class="recording-title">${s.Title || "Untitled Series"}</h4>
+          <p class="text-sm text-muted">Category: <strong style="text-transform: capitalize;">${s.Category || "General"}</strong></p>
           <div class="mt-6">
-            <span class="badge badge-hd">${matchCount > 0 ? `${matchCount} Episode${matchCount > 1 ? 's' : ''}` : 'Series'}</span>
+            <span class="badge badge-hd">${matchCount > 0 ? `${matchCount} Episode${matchCount > 1 ? "s" : ""}` : "Series"}</span>
           </div>
         </div>
       </div>
 
       <div class="recording-meta">
-        ${hasPlayingEp ? '<span class="badge badge-playing" title="An episode in this series is currently playing">▶️ Playing</span>' : ''}
+        ${hasPlayingEp ? '<span class="badge badge-playing" title="An episode in this series is currently playing">▶️ Playing</span>' : ""}
         <span class="recording-meta-item">📅 Latest: ${recordedDate}</span>
-        ${sizeDisplay ? `<span class="recording-meta-item"><strong>${sizeDisplay}</strong></span>` : ''}
+        ${sizeDisplay ? `<span class="recording-meta-item"><strong>${sizeDisplay}</strong></span>` : ""}
       </div>
 
       <div class="recording-actions">
         <button class="btn btn-sm btn-secondary btn-view-series-episodes" data-series-id="${s.SeriesID}">
           View Episodes (${matchCount})
         </button>
-        ${matchCount > 0 ? `
+        ${
+          matchCount > 0
+            ? `
           <button class="btn btn-sm btn-secondary btn-delete-series" data-series-id="${s.SeriesID}" title="Delete Series" aria-label="Delete Series">
             🗑️
           </button>
-        ` : ''}
+        `
+            : ""
+        }
       </div>
     `;
 
     recordingsContainer.appendChild(card);
   });
 
-  recordingsContainer.querySelectorAll('.btn-view-series-episodes').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const sId = btn.getAttribute('data-series-id');
-      state.selectedSeriesId = sId;
-      dvrViewPills.forEach((p) => p.classList.toggle('active', p.getAttribute('data-dvr-view') === 'episodes'));
-      state.dvrSubView = 'episodes';
-      renderCurrentDvrSubView();
+  recordingsContainer
+    .querySelectorAll(".btn-view-series-episodes")
+    .forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const sId = btn.getAttribute("data-series-id");
+        state.selectedSeriesId = sId;
+        dvrViewPills.forEach((p) =>
+          p.classList.toggle(
+            "active",
+            p.getAttribute("data-dvr-view") === "episodes",
+          ),
+        );
+        state.dvrSubView = "episodes";
+        renderCurrentDvrSubView();
+      });
     });
-  });
 
-  recordingsContainer.querySelectorAll('.btn-delete-series').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const sId = btn.getAttribute('data-series-id');
+  recordingsContainer.querySelectorAll(".btn-delete-series").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const sId = btn.getAttribute("data-series-id");
       const s = seriesList.find((item) => item.SeriesID === sId);
       const matching = state.episodes.filter((ep) => ep.SeriesID === sId);
       if (!s || matching.length === 0) return;
 
-      const needConfirm = localStorage.getItem(STORAGE_CONFIRM_DELETE) !== 'false';
+      const needConfirm =
+        localStorage.getItem(STORAGE_CONFIRM_DELETE) !== "false";
 
       if (needConfirm) {
         showDeleteConfirmModal({
-          title: 'Delete Series Recordings',
-          message: `Are you sure you want to permanently delete all ${matching.length} recorded episode(s) of "${s.Title || 'Series'}"? This cannot be undone and will remove the files from your storage drive.`,
+          title: "Delete Series Recordings",
+          message: `Are you sure you want to permanently delete all ${matching.length} recorded episode(s) of "${s.Title || "Series"}"? This cannot be undone and will remove the files from your storage drive.`,
           onConfirm: () => deleteSeries(s, matching),
         });
       } else {
@@ -3844,31 +4354,37 @@ function renderRules(rulesList) {
 
   const validPriorities = rulesList
     .map((r) => r.Priority)
-    .filter((p) => typeof p === 'number' && !isNaN(p));
-  const maxPriority = validPriorities.length > 1 ? Math.max(...validPriorities) : null;
-  const minPriority = validPriorities.length > 1 ? Math.min(...validPriorities) : null;
+    .filter((p) => typeof p === "number" && !isNaN(p));
+  const maxPriority =
+    validPriorities.length > 1 ? Math.max(...validPriorities) : null;
+  const minPriority =
+    validPriorities.length > 1 ? Math.min(...validPriorities) : null;
 
-  recordingsContainer.innerHTML = '';
+  recordingsContainer.innerHTML = "";
   rulesList.forEach((r) => {
-    const card = document.createElement('div');
-    card.className = 'rule-card';
-    const posterUrl = r.ImageURL || 'icon.svg';
+    const card = document.createElement("div");
+    card.className = "rule-card";
+    const posterUrl = r.ImageURL || "icon.svg";
 
-    let criteriaBadge = '';
+    let criteriaBadge = "";
     if (r.TeamOnly) {
       criteriaBadge = `<span class="badge badge-hd">🏈 Team: ${r.TeamOnly}</span>`;
     } else if (r.ChannelOnly) {
       criteriaBadge = `<span class="badge badge-hd">📺 Channel: ${r.ChannelOnly}</span>`;
     }
 
-    let priorityBadge = '';
-    if (typeof r.Priority === 'number') {
-      let qualifier = '';
-      if (maxPriority !== null && minPriority !== null && maxPriority !== minPriority) {
+    let priorityBadge = "";
+    if (typeof r.Priority === "number") {
+      let qualifier = "";
+      if (
+        maxPriority !== null &&
+        minPriority !== null &&
+        maxPriority !== minPriority
+      ) {
         if (r.Priority === maxPriority) {
-          qualifier = ' (highest)';
+          qualifier = " (highest)";
         } else if (r.Priority === minPriority) {
-          qualifier = ' (lowest)';
+          qualifier = " (lowest)";
         }
       }
       priorityBadge = `<span class="rule-priority-badge" title="Scheduling Priority: higher numbers take precedence in HDHomeRun DVR conflicts">Priority ${r.Priority}${qualifier}</span>`;
@@ -3876,20 +4392,20 @@ function renderRules(rulesList) {
 
     card.innerHTML = `
       <div class="recording-top">
-        <img src="${posterUrl}" class="recording-poster" alt="${r.Title || 'Rule'}" loading="lazy" onerror="this.src='icon.svg'" />
+        <img src="${posterUrl}" class="recording-poster" alt="${r.Title || "Rule"}" loading="lazy" onerror="this.src='icon.svg'" />
         <div class="recording-body">
           <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
-            <h4 class="recording-title">${r.Title || 'Recording Rule'}</h4>
+            <h4 class="recording-title">${r.Title || "Recording Rule"}</h4>
             ${priorityBadge}
           </div>
-          ${criteriaBadge ? `<div class="mt-6">${criteriaBadge}</div>` : ''}
-          ${r.Synopsis ? `<p class="recording-synopsis" title="${r.Synopsis}">${r.Synopsis}</p>` : ''}
+          ${criteriaBadge ? `<div class="mt-6">${criteriaBadge}</div>` : ""}
+          ${r.Synopsis ? `<p class="recording-synopsis" title="${r.Synopsis}">${r.Synopsis}</p>` : ""}
         </div>
       </div>
 
       <div class="recording-meta">
-        ${r.StartPadding ? `<span>Padding: +${r.StartPadding}s start</span>` : ''}
-        ${r.EndPadding ? `<span>+${r.EndPadding}s end</span>` : ''}
+        ${r.StartPadding ? `<span>Padding: +${r.StartPadding}s start</span>` : ""}
+        ${r.EndPadding ? `<span>+${r.EndPadding}s end</span>` : ""}
       </div>
     `;
 
@@ -3897,8 +4413,8 @@ function renderRules(rulesList) {
   });
 }
 
-btnRefreshRecordings.addEventListener('click', fetchRecordings);
-btnRecheckDvr.addEventListener('click', fetchRecordings);
+btnRefreshRecordings.addEventListener("click", fetchRecordings);
+btnRecheckDvr.addEventListener("click", fetchRecordings);
 
 /* ==========================================================================
    Recording Management (Delete Operations)
@@ -3906,18 +4422,24 @@ btnRecheckDvr.addEventListener('click', fetchRecordings);
 
 async function deleteEpisode(ep) {
   if (!ep || !ep.CmdURL) {
-    showAlert('Unable to delete: No CmdURL provided for this recording.', 'error');
+    showAlert(
+      "Unable to delete: No CmdURL provided for this recording.",
+      "error",
+    );
     return;
   }
 
-  const deleteUrl = ep.CmdURL + (ep.CmdURL.includes('?') ? '&' : '?') + 'cmd=delete&rerecord=0';
+  const deleteUrl =
+    ep.CmdURL + (ep.CmdURL.includes("?") ? "&" : "?") + "cmd=delete&rerecord=0";
   try {
-    const res = await fetch(deleteUrl, { method: 'POST' });
+    const res = await fetch(deleteUrl, { method: "POST" });
     if (!res.ok) {
       throw new Error(`Device returned HTTP ${res.status}`);
     }
-    showToast(`Deleted "${ep.Title || 'Recording'}"`);
-    state.episodes = state.episodes.filter((e) => e.CmdURL !== ep.CmdURL && e.PlayURL !== ep.PlayURL);
+    showToast(`Deleted "${ep.Title || "Recording"}"`);
+    state.episodes = state.episodes.filter(
+      (e) => e.CmdURL !== ep.CmdURL && e.PlayURL !== ep.PlayURL,
+    );
     episodesCountPill.textContent = state.episodes.length;
     recordingsCountBadge.textContent = state.episodes.length;
     renderCurrentDvrSubView();
@@ -3931,14 +4453,14 @@ async function deleteEpisode(ep) {
       await refreshStorageUsage();
     }, 1200);
   } catch (err) {
-    console.error('Delete error:', err);
-    showAlert(`Failed to delete recording: ${err.message}`, 'error');
+    console.error("Delete error:", err);
+    showAlert(`Failed to delete recording: ${err.message}`, "error");
   }
 }
 
 async function deleteSeries(series, matchingEpisodes) {
   if (!matchingEpisodes || matchingEpisodes.length === 0) {
-    showAlert('No episodes found to delete for this series.', 'error');
+    showAlert("No episodes found to delete for this series.", "error");
     return;
   }
 
@@ -3947,14 +4469,19 @@ async function deleteSeries(series, matchingEpisodes) {
   for (const ep of matchingEpisodes) {
     if (ep.CmdURL) {
       try {
-        const deleteUrl = ep.CmdURL + (ep.CmdURL.includes('?') ? '&' : '?') + 'cmd=delete&rerecord=0';
-        const res = await fetch(deleteUrl, { method: 'POST' });
+        const deleteUrl =
+          ep.CmdURL +
+          (ep.CmdURL.includes("?") ? "&" : "?") +
+          "cmd=delete&rerecord=0";
+        const res = await fetch(deleteUrl, { method: "POST" });
         if (res.ok) {
           deletedCount++;
-          state.episodes = state.episodes.filter((e) => e.CmdURL !== ep.CmdURL && e.PlayURL !== ep.PlayURL);
+          state.episodes = state.episodes.filter(
+            (e) => e.CmdURL !== ep.CmdURL && e.PlayURL !== ep.PlayURL,
+          );
         }
       } catch (e) {
-        console.warn('Failed to delete episode', ep.Title, e);
+        console.warn("Failed to delete episode", ep.Title, e);
       }
     }
   }
@@ -3964,7 +4491,9 @@ async function deleteSeries(series, matchingEpisodes) {
   episodesCountPill.textContent = state.episodes.length;
   recordingsCountBadge.textContent = state.episodes.length;
 
-  showToast(`Deleted ${deletedCount} episode(s) of "${series.Title || 'Series'}"`);
+  showToast(
+    `Deleted ${deletedCount} episode(s) of "${series.Title || "Series"}"`,
+  );
   state.selectedSeriesId = null;
   renderCurrentDvrSubView();
 
@@ -3984,34 +4513,37 @@ async function deleteSeries(series, matchingEpisodes) {
 let currentDeleteCallback = null;
 
 function showDeleteConfirmModal({ title, message, onConfirm }) {
-  if (modalDeleteTitle) modalDeleteTitle.textContent = title || '⚠️ Confirm Deletion';
-  if (confirmDeleteMsg) confirmDeleteMsg.textContent = message || 'Are you sure you want to delete this recording?';
+  if (modalDeleteTitle)
+    modalDeleteTitle.textContent = title || "⚠️ Confirm Deletion";
+  if (confirmDeleteMsg)
+    confirmDeleteMsg.textContent =
+      message || "Are you sure you want to delete this recording?";
   if (confirmDeleteDontAsk) confirmDeleteDontAsk.checked = false;
   currentDeleteCallback = onConfirm;
-  if (modalConfirmDelete) modalConfirmDelete.classList.remove('hidden');
+  if (modalConfirmDelete) modalConfirmDelete.classList.remove("hidden");
 }
 
 function hideDeleteConfirmModal() {
-  if (modalConfirmDelete) modalConfirmDelete.classList.add('hidden');
+  if (modalConfirmDelete) modalConfirmDelete.classList.add("hidden");
   currentDeleteCallback = null;
 }
 
 function setupDeleteModal() {
   if (btnCancelDelete) {
-    btnCancelDelete.addEventListener('click', hideDeleteConfirmModal);
+    btnCancelDelete.addEventListener("click", hideDeleteConfirmModal);
   }
   if (modalCloseBtn) {
-    modalCloseBtn.addEventListener('click', hideDeleteConfirmModal);
+    modalCloseBtn.addEventListener("click", hideDeleteConfirmModal);
   }
   if (modalConfirmDelete) {
-    modalConfirmDelete.addEventListener('click', (e) => {
+    modalConfirmDelete.addEventListener("click", (e) => {
       if (e.target === modalConfirmDelete) hideDeleteConfirmModal();
     });
   }
   if (btnProceedDelete) {
-    btnProceedDelete.addEventListener('click', async () => {
+    btnProceedDelete.addEventListener("click", async () => {
       if (confirmDeleteDontAsk && confirmDeleteDontAsk.checked) {
-        localStorage.setItem(STORAGE_CONFIRM_DELETE, 'false');
+        localStorage.setItem(STORAGE_CONFIRM_DELETE, "false");
         if (prefConfirmDelete) prefConfirmDelete.checked = false;
       }
       const cb = currentDeleteCallback;
@@ -4021,10 +4553,13 @@ function setupDeleteModal() {
   }
 
   if (prefConfirmDelete) {
-    const isConfirm = localStorage.getItem(STORAGE_CONFIRM_DELETE) !== 'false';
+    const isConfirm = localStorage.getItem(STORAGE_CONFIRM_DELETE) !== "false";
     prefConfirmDelete.checked = isConfirm;
-    prefConfirmDelete.addEventListener('change', (e) => {
-      localStorage.setItem(STORAGE_CONFIRM_DELETE, e.target.checked ? 'true' : 'false');
+    prefConfirmDelete.addEventListener("change", (e) => {
+      localStorage.setItem(
+        STORAGE_CONFIRM_DELETE,
+        e.target.checked ? "true" : "false",
+      );
     });
   }
 }
@@ -4033,29 +4568,29 @@ function setupDeleteModal() {
    Alerts & Utilities
    ========================================================================== */
 
-function showAlert(html, type = 'info') {
+function showAlert(html, type = "info") {
   globalAlert.innerHTML = html;
   globalAlert.className = `alert-banner ${type}`;
-  globalAlert.classList.remove('hidden');
+  globalAlert.classList.remove("hidden");
 }
 
 function hideAlert() {
-  globalAlert.classList.add('hidden');
+  globalAlert.classList.add("hidden");
 }
 
 function showToast(msg) {
-  let toast = document.getElementById('app-toast');
+  let toast = document.getElementById("app-toast");
   if (!toast) {
-    toast = document.createElement('div');
-    toast.id = 'app-toast';
-    toast.className = 'app-toast';
+    toast = document.createElement("div");
+    toast.id = "app-toast";
+    toast.className = "app-toast";
     document.body.appendChild(toast);
   }
   toast.textContent = msg;
-  toast.classList.add('visible');
+  toast.classList.add("visible");
   clearTimeout(toast._timer);
   toast._timer = setTimeout(() => {
-    toast.classList.remove('visible');
+    toast.classList.remove("visible");
   }, 2500);
 }
 
@@ -4066,46 +4601,48 @@ function showToast(msg) {
 let deferredPrompt = null;
 
 function setupPwa() {
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
       navigator.serviceWorker
-        .register('sw.js')
-        .then((reg) => console.log('SW registered:', reg.scope))
-        .catch((err) => console.warn('SW registration failed:', err));
+        .register("sw.js")
+        .then((reg) => console.log("SW registered:", reg.scope))
+        .catch((err) => console.warn("SW registration failed:", err));
     });
   }
 
-  window.addEventListener('beforeinstallprompt', (e) => {
+  window.addEventListener("beforeinstallprompt", (e) => {
     e.preventDefault();
     deferredPrompt = e;
-    btnInstall.classList.remove('hidden');
+    btnInstall.classList.remove("hidden");
   });
 
-  btnInstall.addEventListener('click', async () => {
+  btnInstall.addEventListener("click", async () => {
     if (!deferredPrompt) return;
     deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
     console.log(`Install prompt outcome: ${outcome}`);
     deferredPrompt = null;
-    btnInstall.classList.add('hidden');
+    btnInstall.classList.add("hidden");
   });
 
-  window.addEventListener('appinstalled', () => {
-    btnInstall.classList.add('hidden');
+  window.addEventListener("appinstalled", () => {
+    btnInstall.classList.add("hidden");
     renderAppInfo();
   });
 }
 
 function renderAppInfo() {
-  const infoAppVersion = document.getElementById('info-app-version');
-  const appVersionBadge = document.getElementById('app-version-badge');
-  const infoPwaMode = document.getElementById('info-pwa-mode');
+  const infoAppVersion = document.getElementById("info-app-version");
+  const appVersionBadge = document.getElementById("app-version-badge");
+  const infoPwaMode = document.getElementById("info-pwa-mode");
 
   if (infoAppVersion) infoAppVersion.textContent = `v${APP_VERSION}`;
   if (appVersionBadge) appVersionBadge.textContent = `v${APP_VERSION}`;
 
   if (infoPwaMode) {
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+    const isStandalone =
+      window.matchMedia("(display-mode: standalone)").matches ||
+      window.navigator.standalone === true;
     infoPwaMode.innerHTML = isStandalone
       ? '<span class="badge badge-hd">Installed PWA</span>'
       : '<span class="text-muted">Browser Tab</span>';
@@ -4121,61 +4658,65 @@ function renderAppInfo() {
 function isAnyTunerActive(statusItems) {
   if (!Array.isArray(statusItems) || statusItems.length === 0) return false;
   return statusItems.some((item) => {
-    const isTuner = item.Resource && item.Resource.toLowerCase().startsWith('tuner');
+    const isTuner =
+      item.Resource && item.Resource.toLowerCase().startsWith("tuner");
     if (!isTuner) return false;
     return Boolean(
       item.VctNumber ||
       item.Vchannel ||
-      (item.TargetIP && item.TargetIP !== 'none' && item.TargetIP !== '127.0.0.1' && item.TargetIP !== '[::1]') ||
+      (item.TargetIP &&
+        item.TargetIP !== "none" &&
+        item.TargetIP !== "127.0.0.1" &&
+        item.TargetIP !== "[::1]") ||
       (item.SignalStrengthPercent && item.SignalStrengthPercent > 0) ||
-      (item.SignalStrength && item.SignalStrength > 0)
+      (item.SignalStrength && item.SignalStrength > 0),
     );
   });
 }
 
 function updateDiagIdleWarning(statusItems) {
-  const diagIdleWarning = document.getElementById('diag-idle-warning');
+  const diagIdleWarning = document.getElementById("diag-idle-warning");
   if (!diagIdleWarning) return;
 
   const tuners = statusItems || state.tuners;
   if (!Array.isArray(tuners) || tuners.length === 0) {
-    diagIdleWarning.classList.add('hidden');
+    diagIdleWarning.classList.add("hidden");
     return;
   }
 
   const anyActive = isAnyTunerActive(tuners);
   if (!anyActive) {
-    diagIdleWarning.classList.remove('hidden');
+    diagIdleWarning.classList.remove("hidden");
   } else {
-    diagIdleWarning.classList.add('hidden');
+    diagIdleWarning.classList.add("hidden");
   }
 }
 
 function setupDiagnostics() {
-  const btnGatherDiag = document.getElementById('btn-gather-diag');
-  const btnCopyDiag = document.getElementById('btn-copy-diag');
-  const btnDownloadDiag = document.getElementById('btn-download-diag');
-  const btnGithubIssue = document.getElementById('btn-github-issue');
-  const diagRedactAuth = document.getElementById('diag-redact-auth');
+  const btnGatherDiag = document.getElementById("btn-gather-diag");
+  const btnCopyDiag = document.getElementById("btn-copy-diag");
+  const btnDownloadDiag = document.getElementById("btn-download-diag");
+  const btnGithubIssue = document.getElementById("btn-github-issue");
+  const diagRedactAuth = document.getElementById("diag-redact-auth");
 
   if (btnGatherDiag) {
-    btnGatherDiag.addEventListener('click', () => gatherDiagnostics());
+    btnGatherDiag.addEventListener("click", () => gatherDiagnostics());
   }
 
   if (btnCopyDiag) {
-    btnCopyDiag.addEventListener('click', () => copyDiagnosticsToClipboard());
+    btnCopyDiag.addEventListener("click", () => copyDiagnosticsToClipboard());
   }
 
   if (btnDownloadDiag) {
-    btnDownloadDiag.addEventListener('click', () => downloadDiagnosticsJson());
+    btnDownloadDiag.addEventListener("click", () => downloadDiagnosticsJson());
   }
 
   if (btnGithubIssue) {
-    btnGithubIssue.addEventListener('click', () => openGitHubIssue());
+    btnGithubIssue.addEventListener("click", () => openGitHubIssue());
   }
 
   if (diagRedactAuth) {
-    diagRedactAuth.addEventListener('change', () => {
+    diagRedactAuth.addEventListener("change", () => {
       if (state.lastDiagnostics) {
         renderDiagnosticsOutput();
       }
@@ -4214,43 +4755,49 @@ async function fetchDiagnosticEndpoint(url, timeoutMs = 4500) {
     const elapsedMs = Math.round(performance.now() - startTime);
     return {
       available: false,
-      status: 'error',
+      status: "error",
       elapsed_ms: elapsedMs,
-      error_name: err.name || 'Error',
-      error: err.name === 'AbortError' ? `Request timed out after ${timeoutMs / 1000}s` : err.message,
+      error_name: err.name || "Error",
+      error:
+        err.name === "AbortError"
+          ? `Request timed out after ${timeoutMs / 1000}s`
+          : err.message,
     };
   }
 }
 
 async function gatherDiagnostics() {
-  const btnGatherDiag = document.getElementById('btn-gather-diag');
-  const btnCopyDiag = document.getElementById('btn-copy-diag');
-  const btnDownloadDiag = document.getElementById('btn-download-diag');
-  const diagStatusBanner = document.getElementById('diag-status-banner');
-  const diagStatusIcon = document.getElementById('diag-status-icon');
-  const diagStatusText = document.getElementById('diag-status-text');
+  const btnGatherDiag = document.getElementById("btn-gather-diag");
+  const btnCopyDiag = document.getElementById("btn-copy-diag");
+  const btnDownloadDiag = document.getElementById("btn-download-diag");
+  const diagStatusBanner = document.getElementById("diag-status-banner");
+  const diagStatusIcon = document.getElementById("diag-status-icon");
+  const diagStatusText = document.getElementById("diag-status-text");
 
   const ip = state.currentIp;
 
   // Update UI to loading state
   if (btnGatherDiag) {
     btnGatherDiag.disabled = true;
-    btnGatherDiag.textContent = '⏳ Gathering...';
+    btnGatherDiag.textContent = "⏳ Gathering...";
   }
   if (diagStatusBanner) {
-    diagStatusBanner.className = 'diag-status-banner';
-    diagStatusBanner.classList.remove('hidden', 'success', 'error');
-    if (diagStatusIcon) diagStatusIcon.textContent = '⏳';
+    diagStatusBanner.className = "diag-status-banner";
+    diagStatusBanner.classList.remove("hidden", "success", "error");
+    if (diagStatusIcon) diagStatusIcon.textContent = "⏳";
     if (diagStatusText) {
       diagStatusText.textContent = ip
         ? `Gathering diagnostic feeds from HDHomeRun at ${ip} and discovery APIs...`
-        : 'Gathering discovery diagnostic feeds (no device connected)...';
+        : "Gathering discovery diagnostic feeds (no device connected)...";
     }
   }
 
   try {
     // 1. Fetch local mDNS discovery endpoint
-    const mdnsPromise = fetchDiagnosticEndpoint('http://hdhomerun.local/discover.json', 3000);
+    const mdnsPromise = fetchDiagnosticEndpoint(
+      "http://hdhomerun.local/discover.json",
+      3000,
+    );
 
     // 2. Fetch device endpoints if an IP is configured
     let devicePromises = [];
@@ -4262,7 +4809,7 @@ async function gatherDiagnostics() {
         state.hasDvr ||
         state.dvrStorageUrl ||
         state.deviceInfo?.StorageURL ||
-        state.deviceInfo?.StorageID
+        state.deviceInfo?.StorageID,
       );
       dvrUrl = getDvrRecordedFilesUrl(ip);
 
@@ -4299,14 +4846,49 @@ async function gatherDiagnostics() {
       recordedRes = isRecordDevice ? deviceResults[4] : null;
 
       deviceObj = {
-        discover: discoverRes.available ? discoverRes.data : { error: discoverRes.error, error_name: discoverRes.error_name, elapsed_ms: discoverRes.elapsed_ms, status: discoverRes.status },
-        status: statusRes.available ? statusRes.data : { error: statusRes.error, error_name: statusRes.error_name, elapsed_ms: statusRes.elapsed_ms, status: statusRes.status },
-        lineup_status: lineupStatusRes.available ? lineupStatusRes.data : { error: lineupStatusRes.error, error_name: lineupStatusRes.error_name, elapsed_ms: lineupStatusRes.elapsed_ms, status: lineupStatusRes.status },
-        lineup: lineupRes.available ? lineupRes.data : { error: lineupRes.error, error_name: lineupRes.error_name, elapsed_ms: lineupRes.elapsed_ms, status: lineupRes.status },
+        discover: discoverRes.available
+          ? discoverRes.data
+          : {
+              error: discoverRes.error,
+              error_name: discoverRes.error_name,
+              elapsed_ms: discoverRes.elapsed_ms,
+              status: discoverRes.status,
+            },
+        status: statusRes.available
+          ? statusRes.data
+          : {
+              error: statusRes.error,
+              error_name: statusRes.error_name,
+              elapsed_ms: statusRes.elapsed_ms,
+              status: statusRes.status,
+            },
+        lineup_status: lineupStatusRes.available
+          ? lineupStatusRes.data
+          : {
+              error: lineupStatusRes.error,
+              error_name: lineupStatusRes.error_name,
+              elapsed_ms: lineupStatusRes.elapsed_ms,
+              status: lineupStatusRes.status,
+            },
+        lineup: lineupRes.available
+          ? lineupRes.data
+          : {
+              error: lineupRes.error,
+              error_name: lineupRes.error_name,
+              elapsed_ms: lineupRes.elapsed_ms,
+              status: lineupRes.status,
+            },
       };
 
       if (isRecordDevice && recordedRes) {
-        deviceObj.recorded_files = recordedRes.available ? recordedRes.data : { error: recordedRes.error, error_name: recordedRes.error_name, elapsed_ms: recordedRes.elapsed_ms, status: recordedRes.status };
+        deviceObj.recorded_files = recordedRes.available
+          ? recordedRes.data
+          : {
+              error: recordedRes.error,
+              error_name: recordedRes.error_name,
+              elapsed_ms: recordedRes.elapsed_ms,
+              status: recordedRes.status,
+            };
       }
     }
 
@@ -4321,15 +4903,21 @@ async function gatherDiagnostics() {
           },
       telemetry: {
         local_mdns_elapsed_ms: mdnsRes.elapsed_ms,
-        local_mdns_status: mdnsRes.available ? 'success' : 'failed',
-        ...(ip && discoverRes ? {
-          direct_ip_discover_elapsed_ms: discoverRes.elapsed_ms,
-          direct_ip_discover_status: discoverRes.available ? 'success' : 'failed',
-        } : {}),
+        local_mdns_status: mdnsRes.available ? "success" : "failed",
+        ...(ip && discoverRes
+          ? {
+              direct_ip_discover_elapsed_ms: discoverRes.elapsed_ms,
+              direct_ip_discover_status: discoverRes.available
+                ? "success"
+                : "failed",
+            }
+          : {}),
       },
     };
 
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+    const isStandalone =
+      window.matchMedia("(display-mode: standalone)").matches ||
+      window.navigator.standalone === true;
 
     // Build raw diagnostics bundle
     const rawBundle = {
@@ -4337,17 +4925,22 @@ async function gatherDiagnostics() {
         app_version: `v${APP_VERSION}`,
         generated_at: new Date().toISOString(),
         user_agent: navigator.userAgent,
-        pwa_mode: isStandalone ? 'standalone' : 'browser_tab',
+        pwa_mode: isStandalone ? "standalone" : "browser_tab",
         protocol: window.location.protocol,
         host: window.location.host,
-        is_secure_context: typeof window.isSecureContext === 'boolean' ? window.isSecureContext : null,
+        is_secure_context:
+          typeof window.isSecureContext === "boolean"
+            ? window.isSecureContext
+            : null,
         online: navigator.onLine,
-        connection: navigator.connection ? {
-          effective_type: navigator.connection.effectiveType || null,
-          rtt: navigator.connection.rtt ?? null,
-          downlink: navigator.connection.downlink ?? null,
-          save_data: navigator.connection.saveData ?? null,
-        } : null,
+        connection: navigator.connection
+          ? {
+              effective_type: navigator.connection.effectiveType || null,
+              rtt: navigator.connection.rtt ?? null,
+              downlink: navigator.connection.downlink ?? null,
+              save_data: navigator.connection.saveData ?? null,
+            }
+          : null,
         active_device_ip: ip || null,
         active_tab: state.activeTab,
         saved_devices: (state.devices || []).map((d) => ({
@@ -4360,7 +4953,10 @@ async function gatherDiagnostics() {
       },
       discovery: discoveryObj,
       device: deviceObj,
-      tuner_history: ip && state.tunerHistory && Object.keys(state.tunerHistory).length > 0 ? state.tunerHistory : null,
+      tuner_history:
+        ip && state.tunerHistory && Object.keys(state.tunerHistory).length > 0
+          ? state.tunerHistory
+          : null,
     };
 
     state.lastDiagnostics = rawBundle;
@@ -4379,21 +4975,29 @@ async function gatherDiagnostics() {
 
     // Check tuner activity and update warning
     if (ip && statusRes) {
-      updateDiagIdleWarning(statusRes.available ? statusRes.data : state.tuners);
+      updateDiagIdleWarning(
+        statusRes.available ? statusRes.data : state.tuners,
+      );
     } else {
       updateDiagIdleWarning([]);
     }
 
     // Show copy, download & GitHub issue buttons
-    if (btnCopyDiag) btnCopyDiag.classList.remove('hidden');
-    if (btnDownloadDiag) btnDownloadDiag.classList.remove('hidden');
-    const btnGithubIssue = document.getElementById('btn-github-issue');
-    if (btnGithubIssue) btnGithubIssue.classList.remove('hidden');
+    if (btnCopyDiag) btnCopyDiag.classList.remove("hidden");
+    if (btnDownloadDiag) btnDownloadDiag.classList.remove("hidden");
+    const btnGithubIssue = document.getElementById("btn-github-issue");
+    if (btnGithubIssue) btnGithubIssue.classList.remove("hidden");
 
     if (diagStatusBanner) {
-      diagStatusBanner.classList.add('success');
-      const anyActive = ip && statusRes ? isAnyTunerActive(statusRes.available ? statusRes.data : state.tuners) : false;
-      if (diagStatusIcon) diagStatusIcon.textContent = (!ip || anyActive) ? '✅' : '⚠️';
+      diagStatusBanner.classList.add("success");
+      const anyActive =
+        ip && statusRes
+          ? isAnyTunerActive(
+              statusRes.available ? statusRes.data : state.tuners,
+            )
+          : false;
+      if (diagStatusIcon)
+        diagStatusIcon.textContent = !ip || anyActive ? "✅" : "⚠️";
       if (diagStatusText) {
         if (ip) {
           let msg = `Successfully gathered ${availableDevCount} of ${totalDevCount} device feeds and ${availableDiscCount} of 1 mDNS discovery feed from ${ip}.`;
@@ -4402,36 +5006,38 @@ async function gatherDiagnostics() {
           }
           diagStatusText.textContent = msg;
         } else if (availableDiscCount === 0) {
-          diagStatusText.textContent = 'mDNS discovery feed (http://hdhomerun.local) did not respond. Please add your device IP manually above.';
+          diagStatusText.textContent =
+            "mDNS discovery feed (http://hdhomerun.local) did not respond. Please add your device IP manually above.";
         } else {
           diagStatusText.textContent = `Successfully gathered ${availableDiscCount} of 1 mDNS discovery feed (no device connected).`;
         }
       }
     }
   } catch (err) {
-    console.error('Error gathering diagnostics:', err);
+    console.error("Error gathering diagnostics:", err);
     if (diagStatusBanner) {
-      diagStatusBanner.classList.add('error');
-      if (diagStatusIcon) diagStatusIcon.textContent = '⚠️';
-      if (diagStatusText) diagStatusText.textContent = `Failed to gather diagnostics: ${err.message}`;
+      diagStatusBanner.classList.add("error");
+      if (diagStatusIcon) diagStatusIcon.textContent = "⚠️";
+      if (diagStatusText)
+        diagStatusText.textContent = `Failed to gather diagnostics: ${err.message}`;
     }
   } finally {
     if (btnGatherDiag) {
       btnGatherDiag.disabled = false;
-      btnGatherDiag.textContent = '📥 Refresh Diagnostics';
+      btnGatherDiag.textContent = "📥 Refresh Diagnostics";
     }
   }
 }
 
 function anonymizeIp(str) {
-  if (!str || typeof str !== 'string') return str;
+  if (!str || typeof str !== "string") return str;
   // Replace IPv4 last octet with NN: e.g. 192.168.1.100 -> 192.168.1.NN
-  let s = str.replace(/\b(\d{1,3}\.\d{1,3}\.\d{1,3})\.\d{1,3}\b/g, '$1.NN');
+  let s = str.replace(/\b(\d{1,3}\.\d{1,3}\.\d{1,3})\.\d{1,3}\b/g, "$1.NN");
   // Anonymize IPv6 host suffix if present: e.g. 2600:1700:xxxx:...
   s = s.replace(/\b([0-9a-fA-F]{1,4}:){3,7}[0-9a-fA-F]{1,4}\b/g, (match) => {
-    const parts = match.split(':');
+    const parts = match.split(":");
     if (parts.length > 3) {
-      return parts.slice(0, 3).join(':') + ':...:NN';
+      return parts.slice(0, 3).join(":") + ":...:NN";
     }
     return match;
   });
@@ -4443,13 +5049,13 @@ function processDiagnostics(rawBundle, redact) {
   const cloned = JSON.parse(JSON.stringify(rawBundle));
   if (redact) {
     const redactValue = (val) => {
-      if (typeof val === 'string') {
+      if (typeof val === "string") {
         // Anonymize any IPv4/IPv6 addresses (including within URLs like http://192.168.1.100/lineup.json)
         let s = anonymizeIp(val);
 
         // Redact usernames in OS file paths (e.g. /Users/username/ or C:\Users\username\)
-        s = s.replace(/(\/(?:Users|home)\/)[^\/]+/gi, '$1[USER]');
-        s = s.replace(/(C:\\Users\\)[^\\]+/gi, '$1[USER]');
+        s = s.replace(/(\/(?:Users|home)\/)[^\/]+/gi, "$1[USER]");
+        s = s.replace(/(C:\\Users\\)[^\\]+/gi, "$1[USER]");
 
         return s;
       }
@@ -4457,49 +5063,49 @@ function processDiagnostics(rawBundle, redact) {
     };
 
     const redactObject = (obj) => {
-      if (!obj || typeof obj !== 'object') return;
+      if (!obj || typeof obj !== "object") return;
       for (const key of Object.keys(obj)) {
         const lowerKey = key.toLowerCase();
 
         // Redact serial numbers, hardware IDs, and cloud authentication tokens
         if (
-          lowerKey === 'deviceauth' ||
-          lowerKey === 'deviceid' ||
-          lowerKey === 'serial' ||
-          lowerKey === 'serialnumber' ||
-          lowerKey === 'storageid' ||
-          lowerKey === 'mac' ||
-          lowerKey === 'macaddress' ||
-          lowerKey === 'accountid' ||
-          lowerKey === 'accountemail' ||
-          lowerKey === 'email' ||
-          lowerKey === 'usercode' ||
-          lowerKey === 'postalcode' ||
-          lowerKey === 'zipcode' ||
-          lowerKey === 'latitude' ||
-          lowerKey === 'longitude'
+          lowerKey === "deviceauth" ||
+          lowerKey === "deviceid" ||
+          lowerKey === "serial" ||
+          lowerKey === "serialnumber" ||
+          lowerKey === "storageid" ||
+          lowerKey === "mac" ||
+          lowerKey === "macaddress" ||
+          lowerKey === "accountid" ||
+          lowerKey === "accountemail" ||
+          lowerKey === "email" ||
+          lowerKey === "usercode" ||
+          lowerKey === "postalcode" ||
+          lowerKey === "zipcode" ||
+          lowerKey === "latitude" ||
+          lowerKey === "longitude"
         ) {
-          obj[key] = '[REDACTED]';
-        } else if (lowerKey === 'friendlyname') {
+          obj[key] = "[REDACTED]";
+        } else if (lowerKey === "friendlyname") {
           // Redact user-customized device names that might contain personal names
-          obj[key] = 'HDHomeRun';
+          obj[key] = "HDHomeRun";
         } else if (
-          lowerKey === 'targetip' ||
-          lowerKey === 'ip' ||
-          lowerKey === 'localip' ||
-          lowerKey === 'publicip' ||
-          lowerKey === 'clientip' ||
-          lowerKey === 'remoteip' ||
-          lowerKey === 'wanip' ||
-          lowerKey === 'active_device_ip'
+          lowerKey === "targetip" ||
+          lowerKey === "ip" ||
+          lowerKey === "localip" ||
+          lowerKey === "publicip" ||
+          lowerKey === "clientip" ||
+          lowerKey === "remoteip" ||
+          lowerKey === "wanip" ||
+          lowerKey === "active_device_ip"
         ) {
           // Anonymize IP address (e.g. 192.168.1.NN)
-          if (typeof obj[key] === 'string') {
+          if (typeof obj[key] === "string") {
             obj[key] = anonymizeIp(obj[key]);
           }
-        } else if (typeof obj[key] === 'string') {
+        } else if (typeof obj[key] === "string") {
           obj[key] = redactValue(obj[key]);
-        } else if (typeof obj[key] === 'object') {
+        } else if (typeof obj[key] === "object") {
           redactObject(obj[key]);
         }
       }
@@ -4512,10 +5118,10 @@ function processDiagnostics(rawBundle, redact) {
 
 function renderDiagnosticsOutput() {
   if (!state.lastDiagnostics) return;
-  const diagRedactAuth = document.getElementById('diag-redact-auth');
-  const diagOutputWrap = document.getElementById('diag-output-wrap');
-  const diagOutputMeta = document.getElementById('diag-output-meta');
-  const diagOutputPre = document.getElementById('diag-output-pre');
+  const diagRedactAuth = document.getElementById("diag-redact-auth");
+  const diagOutputWrap = document.getElementById("diag-output-wrap");
+  const diagOutputMeta = document.getElementById("diag-output-meta");
+  const diagOutputPre = document.getElementById("diag-output-pre");
 
   const shouldRedact = diagRedactAuth ? diagRedactAuth.checked : true;
   const processed = processDiagnostics(state.lastDiagnostics, shouldRedact);
@@ -4525,17 +5131,26 @@ function renderDiagnosticsOutput() {
   const kbSize = (bytes / 1024).toFixed(1);
 
   // Discovery feeds count (mDNS)
-  const availableDisc = (processed.discovery?.local_mdns && !processed.discovery.local_mdns.error && processed.discovery.local_mdns.available !== false) ? 1 : 0;
+  const availableDisc =
+    processed.discovery?.local_mdns &&
+    !processed.discovery.local_mdns.error &&
+    processed.discovery.local_mdns.available !== false
+      ? 1
+      : 0;
 
-  let feedSummary = '';
+  let feedSummary = "";
   if (processed.device) {
-    const devKeys = ['discover', 'status', 'lineup', 'lineup_status'];
+    const devKeys = ["discover", "status", "lineup", "lineup_status"];
     if (processed.device?.recorded_files !== undefined) {
-      devKeys.push('recorded_files');
+      devKeys.push("recorded_files");
     }
     let availableDev = 0;
     devKeys.forEach((k) => {
-      if (processed.device?.[k] && !processed.device[k].error && processed.device[k].available !== false) {
+      if (
+        processed.device?.[k] &&
+        !processed.device[k].error &&
+        processed.device[k].available !== false
+      ) {
         availableDev++;
       }
     });
@@ -4545,22 +5160,22 @@ function renderDiagnosticsOutput() {
   }
 
   if (diagOutputMeta) {
-    diagOutputMeta.textContent = `${kbSize} KB • ${feedSummary} • ${shouldRedact ? 'Anonymized & Redacted' : 'Full (Raw)'}`;
+    diagOutputMeta.textContent = `${kbSize} KB • ${feedSummary} • ${shouldRedact ? "Anonymized & Redacted" : "Full (Raw)"}`;
   }
 
   if (diagOutputPre) {
-    const codeEl = diagOutputPre.querySelector('code') || diagOutputPre;
+    const codeEl = diagOutputPre.querySelector("code") || diagOutputPre;
     codeEl.textContent = jsonStr;
   }
 
   if (diagOutputWrap) {
-    diagOutputWrap.classList.remove('hidden');
+    diagOutputWrap.classList.remove("hidden");
   }
 }
 
 async function copyDiagnosticsToClipboard() {
   if (!state.lastDiagnostics) return;
-  const diagRedactAuth = document.getElementById('diag-redact-auth');
+  const diagRedactAuth = document.getElementById("diag-redact-auth");
 
   const shouldRedact = diagRedactAuth ? diagRedactAuth.checked : true;
   const processed = processDiagnostics(state.lastDiagnostics, shouldRedact);
@@ -4570,17 +5185,17 @@ async function copyDiagnosticsToClipboard() {
     await navigator.clipboard.writeText(jsonStr);
     showCopyFeedback();
   } catch (err) {
-    const textarea = document.createElement('textarea');
+    const textarea = document.createElement("textarea");
     textarea.value = jsonStr;
-    textarea.style.position = 'fixed';
-    textarea.style.opacity = '0';
+    textarea.style.position = "fixed";
+    textarea.style.opacity = "0";
     document.body.appendChild(textarea);
     textarea.select();
     try {
-      document.execCommand('copy');
+      document.execCommand("copy");
       showCopyFeedback();
     } catch (fallbackErr) {
-      alert('Failed to copy to clipboard: ' + fallbackErr.message);
+      alert("Failed to copy to clipboard: " + fallbackErr.message);
     } finally {
       document.body.removeChild(textarea);
     }
@@ -4588,27 +5203,27 @@ async function copyDiagnosticsToClipboard() {
 }
 
 function showCopyFeedback() {
-  const diagCopyFeedback = document.getElementById('diag-copy-feedback');
+  const diagCopyFeedback = document.getElementById("diag-copy-feedback");
   if (diagCopyFeedback) {
-    diagCopyFeedback.classList.remove('hidden');
+    diagCopyFeedback.classList.remove("hidden");
     setTimeout(() => {
-      diagCopyFeedback.classList.add('hidden');
+      diagCopyFeedback.classList.add("hidden");
     }, 2500);
   }
 }
 
 function downloadDiagnosticsJson() {
   if (!state.lastDiagnostics) return;
-  const diagRedactAuth = document.getElementById('diag-redact-auth');
+  const diagRedactAuth = document.getElementById("diag-redact-auth");
   const shouldRedact = diagRedactAuth ? diagRedactAuth.checked : true;
   const processed = processDiagnostics(state.lastDiagnostics, shouldRedact);
   const jsonStr = JSON.stringify(processed, null, 2);
 
-  const blob = new Blob([jsonStr], { type: 'application/json' });
+  const blob = new Blob([jsonStr], { type: "application/json" });
   const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
+  const a = document.createElement("a");
 
-  const dateStr = new Date().toISOString().replace(/[:.]/g, '-');
+  const dateStr = new Date().toISOString().replace(/[:.]/g, "-");
   a.href = url;
   a.download = `hdhr-diagnostics-${dateStr}.json`;
   document.body.appendChild(a);
@@ -4620,14 +5235,16 @@ function downloadDiagnosticsJson() {
 function openGitHubIssue() {
   const ip = state.currentIp;
   const dev = state.deviceInfo || {};
-  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  const isStandalone =
+    window.matchMedia("(display-mode: standalone)").matches ||
+    window.navigator.standalone === true;
 
   // Issue title is clean: no serial number, no IP address
   const title = ip
-    ? `[Issue]: Problem with ${dev.ModelNumber || 'HDHomeRun'}`
-    : `[Issue]: Device Discovery Issue (${navigator.userAgent.includes('Android') ? 'Android' : 'Web'})`;
+    ? `[Issue]: Problem with ${dev.ModelNumber || "HDHomeRun"}`
+    : `[Issue]: Device Discovery Issue (${navigator.userAgent.includes("Android") ? "Android" : "Web"})`;
 
-  const anonymizedIp = ip ? anonymizeIp(ip) : 'None configured';
+  const anonymizedIp = ip ? anonymizeIp(ip) : "None configured";
   let baseBody = `### 🚨 Problem Description (Required)\n`;
   baseBody += `> ✍️ **PLEASE DESCRIBE YOUR ISSUE HERE BEFORE SUBMITTING:**\n`;
   baseBody += `> - *What is happening? (e.g. video freezing, pixelation, channels failing to tune, device discovery failing)*\n`;
@@ -4638,11 +5255,13 @@ function openGitHubIssue() {
   // Get tuner data from lastDiagnostics or state.tuners
   const statusItems = Array.isArray(state.lastDiagnostics?.device?.status)
     ? state.lastDiagnostics.device.status
-    : (Array.isArray(state.tuners) ? state.tuners : []);
+    : Array.isArray(state.tuners)
+      ? state.tuners
+      : [];
 
   // Filter for actual physical tuners (exclude session objects like "live", "record")
-  const physicalTuners = statusItems.filter((item) =>
-    item.Resource && item.Resource.toLowerCase().startsWith('tuner')
+  const physicalTuners = statusItems.filter(
+    (item) => item.Resource && item.Resource.toLowerCase().startsWith("tuner"),
   );
 
   // Active tuners are physical tuners currently tuning or streaming
@@ -4650,28 +5269,34 @@ function openGitHubIssue() {
     Boolean(
       t.VctNumber ||
       t.Vchannel ||
-      (t.Channel && t.Channel !== 'none') ||
-      (t.TargetIP && t.TargetIP !== 'none' && t.TargetIP !== '127.0.0.1' && t.TargetIP !== '::1' && t.TargetIP !== '[::1]') ||
+      (t.Channel && t.Channel !== "none") ||
+      (t.TargetIP &&
+        t.TargetIP !== "none" &&
+        t.TargetIP !== "127.0.0.1" &&
+        t.TargetIP !== "::1" &&
+        t.TargetIP !== "[::1]") ||
       (t.SignalStrengthPercent && t.SignalStrengthPercent > 0) ||
-      (t.SignalStrength && t.SignalStrength > 0)
-    )
+      (t.SignalStrength && t.SignalStrength > 0),
+    ),
   );
 
-  const totalTunerCount = dev.TunerCount || (physicalTuners.length > 0 ? physicalTuners.length : 'Unknown');
+  const totalTunerCount =
+    dev.TunerCount ||
+    (physicalTuners.length > 0 ? physicalTuners.length : "Unknown");
 
   baseBody += `### Environment & Diagnostic Summary\n`;
   baseBody += `- **HDHR Dash Version:** v${APP_VERSION}\n`;
-  baseBody += `- **Device Model:** ${ip ? (dev.ModelNumber || 'HDHomeRun') : 'None (Discovery issue)'}\n`;
+  baseBody += `- **Device Model:** ${ip ? dev.ModelNumber || "HDHomeRun" : "None (Discovery issue)"}\n`;
   baseBody += `- **Device ID / Serial:** \`[REDACTED]\`\n`;
-  baseBody += `- **Firmware Version:** \`${dev.FirmwareVersion || 'Unknown'}\`\n`;
+  baseBody += `- **Firmware Version:** \`${dev.FirmwareVersion || "Unknown"}\`\n`;
   baseBody += `- **Device IP:** \`${anonymizedIp}\`\n`;
   baseBody += `- **Protocol / Host:** \`${window.location.protocol}//${window.location.host}\`\n`;
-  baseBody += `- **App Mode:** ${isStandalone ? 'Installed PWA' : 'Browser Tab'}\n`;
+  baseBody += `- **App Mode:** ${isStandalone ? "Installed PWA" : "Browser Tab"}\n`;
   baseBody += `- **User Agent:** \`${navigator.userAgent}\`\n`;
   if (ip) {
     baseBody += `- **Total Tuners:** ${totalTunerCount}\n`;
-    baseBody += `- **Active Tuners:** ${activeTuners.length} (${activeTuners.length === 0 ? 'All tuners idle' : `${activeTuners.length} of ${totalTunerCount} in use`})\n`;
-    baseBody += `- **Lineup Channels:** ${state.lineup ? state.lineup.length : 'Unknown'}\n\n`;
+    baseBody += `- **Active Tuners:** ${activeTuners.length} (${activeTuners.length === 0 ? "All tuners idle" : `${activeTuners.length} of ${totalTunerCount} in use`})\n`;
+    baseBody += `- **Lineup Channels:** ${state.lineup ? state.lineup.length : "Unknown"}\n\n`;
   } else {
     baseBody += `- **Saved Devices in Storage:** ${(state.devices || []).length}\n\n`;
   }
@@ -4680,9 +5305,9 @@ function openGitHubIssue() {
     baseBody += `### Current Tuner Status\n`;
     if (activeTuners.length > 0) {
       activeTuners.forEach((t) => {
-        const name = formatTunerName(t.Resource || 'tuner');
+        const name = formatTunerName(t.Resource || "tuner");
         const station = getStationInfo(t.VctName || t.Vchannel);
-        let stationMeta = '';
+        let stationMeta = "";
         if (station) {
           if (station.network && station.locality) {
             stationMeta = ` [${station.network} • ${station.locality}]`;
@@ -4694,13 +5319,19 @@ function openGitHubIssue() {
         }
         const channelDisplay = t.VctNumber
           ? `${t.VctNumber}${t.VctName ? ` (${t.VctName}${stationMeta})` : stationMeta}`
-          : (t.Vchannel || (t.Channel && t.Channel !== 'none' ? t.Channel : 'None'));
+          : t.Vchannel ||
+            (t.Channel && t.Channel !== "none" ? t.Channel : "None");
         const strength = t.SignalStrengthPercent ?? t.SignalStrength ?? 0;
         const snr = t.SignalQualityPercent ?? t.SignalQuality ?? 0;
         const sym = t.SymbolQualityPercent ?? t.SymbolQuality ?? 0;
-        const clientTarget = (t.TargetIP && t.TargetIP !== 'none' && t.TargetIP !== '127.0.0.1' && t.TargetIP !== '::1' && t.TargetIP !== '[::1]')
-          ? ` | Client: ${anonymizeIp(t.TargetIP)}`
-          : '';
+        const clientTarget =
+          t.TargetIP &&
+          t.TargetIP !== "none" &&
+          t.TargetIP !== "127.0.0.1" &&
+          t.TargetIP !== "::1" &&
+          t.TargetIP !== "[::1]"
+            ? ` | Client: ${anonymizeIp(t.TargetIP)}`
+            : "";
         baseBody += `- **${name}:** Channel ${channelDisplay} | Signal: ${strength}% | SNR: ${snr}% | Sym: ${sym}%${clientTarget}\n`;
       });
       baseBody += `\n`;
@@ -4709,11 +5340,11 @@ function openGitHubIssue() {
     }
   }
 
-  let fullUrl = '';
+  let fullUrl = "";
   const MAX_URL_LEN = 6500;
 
   if (state.lastDiagnostics) {
-    const diagRedactAuth = document.getElementById('diag-redact-auth');
+    const diagRedactAuth = document.getElementById("diag-redact-auth");
     const shouldRedact = diagRedactAuth ? diagRedactAuth.checked : true;
     const processed = processDiagnostics(state.lastDiagnostics, shouldRedact);
 
@@ -4759,11 +5390,18 @@ function openGitHubIssue() {
       fullUrl = makeUrl(candidateBody);
 
       // If still too long, progressively slice lineup
-      if (fullUrl.length > MAX_URL_LEN && compacted.device && Array.isArray(compacted.device.lineup)) {
+      if (
+        fullUrl.length > MAX_URL_LEN &&
+        compacted.device &&
+        Array.isArray(compacted.device.lineup)
+      ) {
         const totalCh = compacted.device.lineup.length;
         let sliceCount = Math.min(compacted.device.lineup.length, 50);
         while (sliceCount > 5 && fullUrl.length > MAX_URL_LEN) {
-          compacted.device.lineup = compacted.device.lineup.slice(0, sliceCount);
+          compacted.device.lineup = compacted.device.lineup.slice(
+            0,
+            sliceCount,
+          );
           compacted.device._lineup_note = `Showing ${sliceCount} of ${totalCh} channels (compacted for GitHub URL limit).`;
           jsonStr = JSON.stringify(compacted);
           candidateBody = `${baseBody}### Diagnostic Logs\n<details open><summary>Diagnostic Logs (JSON)</summary>\n\n\`\`\`json\n${jsonStr}\n\`\`\`\n</details>\n`;
@@ -4780,19 +5418,20 @@ function openGitHubIssue() {
     }
 
     showCopyFeedback();
-    const diagStatusText = document.getElementById('diag-status-text');
-    const diagStatusBanner = document.getElementById('diag-status-banner');
+    const diagStatusText = document.getElementById("diag-status-text");
+    const diagStatusBanner = document.getElementById("diag-status-banner");
     if (diagStatusBanner && diagStatusText) {
-      diagStatusBanner.className = 'diag-status-banner success';
-      diagStatusBanner.classList.remove('hidden');
-      diagStatusText.textContent = 'Opening GitHub issue with pre-filled diagnostic logs!';
+      diagStatusBanner.className = "diag-status-banner success";
+      diagStatusBanner.classList.remove("hidden");
+      diagStatusText.textContent =
+        "Opening GitHub issue with pre-filled diagnostic logs!";
     }
   } else {
     baseBody += `### Diagnostic Logs\n<!-- Gather and attach diagnostic logs from the System tab -> Diagnostic Logs & Export -->\n`;
     fullUrl = `https://github.com/jay0lee/hdhr-dash/issues/new?title=${encodeURIComponent(title)}&body=${encodeURIComponent(baseBody)}`;
   }
 
-  window.open(fullUrl, '_blank', 'noopener,noreferrer');
+  window.open(fullUrl, "_blank", "noopener,noreferrer");
 }
 
 /* ==========================================================================
@@ -4804,15 +5443,15 @@ const playerState = {
   isMini: false,
   isFullscreen: false,
   showStats: false,
-  aspectRatio: '16:9',
+  aspectRatio: "16:9",
   channel: null,
   isPlaying: false,
   isMuted: false,
   volume: 1.0,
   stats: {
-    resolution: 'Waiting for stream...',
-    videoCodec: 'MPEG-2 Video',
-    audioCodec: 'AC-3 Dolby Digital',
+    resolution: "Waiting for stream...",
+    videoCodec: "MPEG-2 Video",
+    audioCodec: "AC-3 Dolby Digital",
     fps: 0,
     droppedFrames: 0,
     latencyMs: 0,
@@ -4835,43 +5474,43 @@ let playerElements = null;
 function getPlayerElements() {
   if (!playerElements) {
     playerElements = {
-      layer: document.getElementById('player-window-layer'),
-      card: document.getElementById('player-window-card'),
-      header: document.getElementById('player-window-header'),
-      title: document.getElementById('player-channel-title'),
-      sub: document.getElementById('player-channel-sub'),
-      logo: document.getElementById('player-channel-logo'),
-      viewport: document.getElementById('player-viewport'),
-      canvas: document.getElementById('player-canvas'),
-      loadingOverlay: document.getElementById('player-loading-overlay'),
-      loadingText: document.getElementById('player-loading-text'),
-      statsHud: document.getElementById('player-stats-hud'),
-      btnStats: document.getElementById('btn-player-stats'),
-      btnRatio: document.getElementById('btn-player-ratio'),
-      btnMinimize: document.getElementById('btn-player-minimize'),
-      btnFullscreen: document.getElementById('btn-player-fullscreen'),
-      btnClose: document.getElementById('btn-player-close'),
-      btnPlayPause: document.getElementById('btn-player-playpause'),
-      btnJumpLive: document.getElementById('btn-player-jump-live'),
-      btnMute: document.getElementById('btn-player-mute'),
-      volumeSlider: document.getElementById('player-volume-slider'),
-      btnFsBottom: document.getElementById('btn-player-fs-bottom'),
-      formatTag: document.getElementById('player-format-tag'),
-      hudChannel: document.getElementById('hud-channel'),
-      hudResolution: document.getElementById('hud-resolution'),
-      hudVideoCodec: document.getElementById('hud-video-codec'),
-      hudAudioCodec: document.getElementById('hud-audio-codec'),
-      hudFps: document.getElementById('hud-fps'),
-      hudDropped: document.getElementById('hud-dropped'),
-      hudLatency: document.getElementById('hud-latency'),
-      hudSync: document.getElementById('hud-sync'),
-      hudBitrate: document.getElementById('hud-bitrate'),
-      hudTuner: document.getElementById('hud-tuner'),
-      hudSignalStrength: document.getElementById('hud-signal-strength'),
-      hudSignalQuality: document.getElementById('hud-signal-quality'),
-      hudSymbolQuality: document.getElementById('hud-symbol-quality'),
-      playerSignalPill: document.getElementById('player-signal-pill'),
-      playerSignalLabel: document.getElementById('player-signal-label'),
+      layer: document.getElementById("player-window-layer"),
+      card: document.getElementById("player-window-card"),
+      header: document.getElementById("player-window-header"),
+      title: document.getElementById("player-channel-title"),
+      sub: document.getElementById("player-channel-sub"),
+      logo: document.getElementById("player-channel-logo"),
+      viewport: document.getElementById("player-viewport"),
+      canvas: document.getElementById("player-canvas"),
+      loadingOverlay: document.getElementById("player-loading-overlay"),
+      loadingText: document.getElementById("player-loading-text"),
+      statsHud: document.getElementById("player-stats-hud"),
+      btnStats: document.getElementById("btn-player-stats"),
+      btnRatio: document.getElementById("btn-player-ratio"),
+      btnMinimize: document.getElementById("btn-player-minimize"),
+      btnFullscreen: document.getElementById("btn-player-fullscreen"),
+      btnClose: document.getElementById("btn-player-close"),
+      btnPlayPause: document.getElementById("btn-player-playpause"),
+      btnJumpLive: document.getElementById("btn-player-jump-live"),
+      btnMute: document.getElementById("btn-player-mute"),
+      volumeSlider: document.getElementById("player-volume-slider"),
+      btnFsBottom: document.getElementById("btn-player-fs-bottom"),
+      formatTag: document.getElementById("player-format-tag"),
+      hudChannel: document.getElementById("hud-channel"),
+      hudResolution: document.getElementById("hud-resolution"),
+      hudVideoCodec: document.getElementById("hud-video-codec"),
+      hudAudioCodec: document.getElementById("hud-audio-codec"),
+      hudFps: document.getElementById("hud-fps"),
+      hudDropped: document.getElementById("hud-dropped"),
+      hudLatency: document.getElementById("hud-latency"),
+      hudSync: document.getElementById("hud-sync"),
+      hudBitrate: document.getElementById("hud-bitrate"),
+      hudTuner: document.getElementById("hud-tuner"),
+      hudSignalStrength: document.getElementById("hud-signal-strength"),
+      hudSignalQuality: document.getElementById("hud-signal-quality"),
+      hudSymbolQuality: document.getElementById("hud-symbol-quality"),
+      playerSignalPill: document.getElementById("player-signal-pill"),
+      playerSignalLabel: document.getElementById("player-signal-label"),
     };
   }
   return playerElements;
@@ -4894,7 +5533,7 @@ function openPlayer(chNum, chName, streamUrl) {
   playerState.isPlaying = true;
 
   if (el.title) el.title.textContent = `${chNum} ${chName}`;
-  if (el.sub) el.sub.textContent = 'ATSC 1.0 • HDHomeRun Live Stream';
+  if (el.sub) el.sub.textContent = "ATSC 1.0 • HDHomeRun Live Stream";
   if (el.hudChannel) el.hudChannel.textContent = `${chNum} ${chName}`;
 
   if (el.logo) {
@@ -4908,18 +5547,18 @@ function openPlayer(chNum, chName, streamUrl) {
         el.logo.innerHTML = `<span class="badge badge-affiliate" style="font-size: 0.65rem; padding: 1px 4px;">${stationInfo.network}</span>`;
       }
     } else {
-      el.logo.innerHTML = '';
+      el.logo.innerHTML = "";
     }
   }
 
   if (el.loadingOverlay) {
-    el.loadingOverlay.classList.remove('fade-out');
+    el.loadingOverlay.classList.remove("fade-out");
   }
   if (el.loadingText) {
     el.loadingText.textContent = `Connecting to ${chNum} ${chName}...`;
   }
 
-  el.layer.classList.remove('hidden');
+  el.layer.classList.remove("hidden");
   initPlayerCanvas();
   startPlayerStream(streamUrl);
 }
@@ -4938,13 +5577,13 @@ function closePlayer() {
     } catch (e) {}
   }
 
-  el.layer.classList.add('hidden');
+  el.layer.classList.add("hidden");
 }
 
 function stopPlayerStream() {
   if (playerState.worker) {
     try {
-      playerState.worker.postMessage({ type: 'STOP' });
+      playerState.worker.postMessage({ type: "STOP" });
       playerState.worker.terminate();
     } catch (e) {}
     playerState.worker = null;
@@ -4974,26 +5613,26 @@ function stopPlayerStream() {
   playerState.isPlaying = false;
   stopTunerStatusPolling();
   const el = getPlayerElements();
-  if (el.btnPlayPause) el.btnPlayPause.textContent = '▶';
-  if (el.hudTuner) el.hudTuner.textContent = '—';
+  if (el.btnPlayPause) el.btnPlayPause.textContent = "▶";
+  if (el.hudTuner) el.hudTuner.textContent = "—";
   if (el.hudSignalStrength) {
-    el.hudSignalStrength.textContent = '—';
-    el.hudSignalStrength.style.color = '';
+    el.hudSignalStrength.textContent = "—";
+    el.hudSignalStrength.style.color = "";
   }
   if (el.hudSignalQuality) {
-    el.hudSignalQuality.textContent = '—';
-    el.hudSignalQuality.style.color = '';
+    el.hudSignalQuality.textContent = "—";
+    el.hudSignalQuality.style.color = "";
   }
   if (el.hudSymbolQuality) {
-    el.hudSymbolQuality.textContent = '—';
-    el.hudSymbolQuality.style.color = '';
+    el.hudSymbolQuality.textContent = "—";
+    el.hudSymbolQuality.style.color = "";
   }
   if (el.playerSignalPill) {
-    el.playerSignalPill.classList.add('hidden');
-    el.playerSignalPill.className = 'badge-signal hidden';
+    el.playerSignalPill.classList.add("hidden");
+    el.playerSignalPill.className = "badge-signal hidden";
   }
   if (el.playerSignalLabel) {
-    el.playerSignalLabel.textContent = '—';
+    el.playerSignalLabel.textContent = "—";
   }
 }
 
@@ -5010,7 +5649,8 @@ function startTunerStatusPolling() {
   if (!state.currentIp) return;
 
   async function poll() {
-    if (!playerState.isOpen || !playerState.isPlaying || !state.currentIp) return;
+    if (!playerState.isOpen || !playerState.isPlaying || !state.currentIp)
+      return;
     try {
       const res = await fetch(`http://${state.currentIp}/status.json`);
       if (!res.ok) return;
@@ -5023,46 +5663,79 @@ function startTunerStatusPolling() {
         activeTuner = tuners.find((t) => t.VctNumber === chNum);
         if (!activeTuner) {
           activeTuner = tuners.find(
-            (t) => t.VctNumber && t.VctNumber.replace(/^0+/, '') === chNum.replace(/^0+/, '')
+            (t) =>
+              t.VctNumber &&
+              t.VctNumber.replace(/^0+/, "") === chNum.replace(/^0+/, ""),
           );
         }
       }
       if (!activeTuner) {
-        activeTuner = tuners.find((t) => t.SignalStrengthPercent > 0 || (t.TargetIP && t.TargetIP !== 'none'));
+        activeTuner = tuners.find(
+          (t) =>
+            t.SignalStrengthPercent > 0 ||
+            (t.TargetIP && t.TargetIP !== "none"),
+        );
       }
 
       if (activeTuner) {
         playerState.tunerStatus = activeTuner;
         const el = getPlayerElements();
         if (el.hudTuner) {
-          const tName = activeTuner.Resource ? activeTuner.Resource.toUpperCase() : 'TUNER';
+          const tName = activeTuner.Resource
+            ? activeTuner.Resource.toUpperCase()
+            : "TUNER";
           el.hudTuner.textContent = tName;
         }
         const ss = activeTuner.SignalStrengthPercent ?? 0;
         const snq = activeTuner.SignalQualityPercent ?? 0;
         const seq = activeTuner.SymbolQualityPercent ?? 0;
 
-        if (el.hudSignalStrength && activeTuner.SignalStrengthPercent !== undefined) {
+        if (
+          el.hudSignalStrength &&
+          activeTuner.SignalStrengthPercent !== undefined
+        ) {
           el.hudSignalStrength.textContent = `${ss}%`;
           el.hudSignalStrength.style.color =
-            ss >= 70 ? 'var(--color-success, #22c55e)' : (ss >= 50 ? 'var(--color-warning, #eab308)' : 'var(--color-danger, #ef4444)');
+            ss >= 70
+              ? "var(--color-success, #22c55e)"
+              : ss >= 50
+                ? "var(--color-warning, #eab308)"
+                : "var(--color-danger, #ef4444)";
         }
-        if (el.hudSignalQuality && activeTuner.SignalQualityPercent !== undefined) {
+        if (
+          el.hudSignalQuality &&
+          activeTuner.SignalQualityPercent !== undefined
+        ) {
           el.hudSignalQuality.textContent = `${snq}%`;
           el.hudSignalQuality.style.color =
-            snq >= 70 ? 'var(--color-success, #22c55e)' : (snq >= 50 ? 'var(--color-warning, #eab308)' : 'var(--color-danger, #ef4444)');
+            snq >= 70
+              ? "var(--color-success, #22c55e)"
+              : snq >= 50
+                ? "var(--color-warning, #eab308)"
+                : "var(--color-danger, #ef4444)";
         }
-        if (el.hudSymbolQuality && activeTuner.SymbolQualityPercent !== undefined) {
+        if (
+          el.hudSymbolQuality &&
+          activeTuner.SymbolQualityPercent !== undefined
+        ) {
           el.hudSymbolQuality.textContent = `${seq}%`;
           el.hudSymbolQuality.style.color =
-            seq === 100 ? 'var(--color-success, #22c55e)' : (seq >= 90 ? 'var(--color-warning, #eab308)' : 'var(--color-danger, #ef4444)');
+            seq === 100
+              ? "var(--color-success, #22c55e)"
+              : seq >= 90
+                ? "var(--color-warning, #eab308)"
+                : "var(--color-danger, #ef4444)";
         }
         if (el.playerSignalPill && el.playerSignalLabel) {
-          const rateMbps = activeTuner.NetworkRate ? (activeTuner.NetworkRate / 1000000).toFixed(1) : '0.0';
+          const rateMbps = activeTuner.NetworkRate
+            ? (activeTuner.NetworkRate / 1000000).toFixed(1)
+            : "0.0";
           el.playerSignalLabel.textContent = `SS ${ss}% • SNQ ${snq}%`;
           el.playerSignalPill.title = `Tuner Signal: Strength ${ss}% | Quality (SNQ) ${snq}% | Symbol (SEQ) ${seq}% | Net ${rateMbps} Mbps`;
-          el.playerSignalPill.className = 'badge-signal ' + (snq >= 70 ? 'good' : (snq >= 50 ? 'fair' : 'poor'));
-          el.playerSignalPill.classList.remove('hidden');
+          el.playerSignalPill.className =
+            "badge-signal " +
+            (snq >= 70 ? "good" : snq >= 50 ? "fair" : "poor");
+          el.playerSignalPill.classList.remove("hidden");
         }
       }
     } catch (e) {
@@ -5081,20 +5754,20 @@ async function startPlayerStream(streamUrl) {
   startTunerStatusPolling();
 
   const el = getPlayerElements();
-  if (el.btnPlayPause) el.btnPlayPause.textContent = '⏸';
+  if (el.btnPlayPause) el.btnPlayPause.textContent = "⏸";
   if (el.loadingText) {
-    el.loadingText.textContent = `Tuning ${playerState.channel ? playerState.channel.number + ' ' + playerState.channel.name : 'channel'}...`;
+    el.loadingText.textContent = `Tuning ${playerState.channel ? playerState.channel.number + " " + playerState.channel.name : "channel"}...`;
   }
   if (el.loadingOverlay) {
-    el.loadingOverlay.classList.remove('fade-out');
+    el.loadingOverlay.classList.remove("fade-out");
   }
 
   // Reset telemetry indicators
-  if (el.hudBitrate) el.hudBitrate.textContent = 'Buffering...';
-  if (el.hudResolution) el.hudResolution.textContent = 'Detecting...';
-  if (el.hudFps) el.hudFps.textContent = '--';
-  if (el.hudDropped) el.hudDropped.textContent = '0';
-  if (el.hudSync) el.hudSync.textContent = '0 ms';
+  if (el.hudBitrate) el.hudBitrate.textContent = "Buffering...";
+  if (el.hudResolution) el.hudResolution.textContent = "Detecting...";
+  if (el.hudFps) el.hudFps.textContent = "--";
+  if (el.hudDropped) el.hudDropped.textContent = "0";
+  if (el.hudSync) el.hudSync.textContent = "0 ms";
 
   playerState.lastStatsTime = performance.now();
   playerState.lastStatsBytes = 0;
@@ -5114,39 +5787,42 @@ async function startPlayerStream(streamUrl) {
 
   // 1. Initialize Web Worker for background demuxing and decoding
   let useWorker = false;
-  if (typeof Worker !== 'undefined') {
+  if (typeof Worker !== "undefined") {
     try {
-      playerState.worker = new Worker('atsc-worker.js?v=' + APP_VERSION);
+      playerState.worker = new Worker("atsc-worker.js?v=" + APP_VERSION);
 
       playerState.worker.onmessage = function (e) {
         const msg = e.data;
         if (!msg) return;
 
         switch (msg.type) {
-          case 'PAT':
+          case "PAT":
             if (el.loadingText) {
-              el.loadingText.textContent = 'Found Program (PAT)...';
+              el.loadingText.textContent = "Found Program (PAT)...";
             }
             break;
 
-          case 'PMT':
+          case "PMT":
             if (el.loadingText) {
-              el.loadingText.textContent = 'Found Stream Map (PMT)...';
+              el.loadingText.textContent = "Found Stream Map (PMT)...";
             }
             if (el.hudVideoCodec && msg.videoStreamType) {
               el.hudVideoCodec.textContent =
-                msg.videoStreamType === 0x02 ? 'MPEG-2 Video' : 'H.264 Video';
+                msg.videoStreamType === 0x02 ? "MPEG-2 Video" : "H.264 Video";
             }
             if (el.hudAudioCodec && msg.audioStreamType) {
               el.hudAudioCodec.textContent =
-                msg.audioStreamType === 0x81 ? 'AC-3 Dolby Digital' : 'Audio';
+                msg.audioStreamType === 0x81 ? "AC-3 Dolby Digital" : "Audio";
             }
             break;
 
-          case 'VIDEO_FRAME':
+          case "VIDEO_FRAME":
             // Dismiss loading overlay on first decoded video frame
-            if (el.loadingOverlay && !el.loadingOverlay.classList.contains('fade-out')) {
-              el.loadingOverlay.classList.add('fade-out');
+            if (
+              el.loadingOverlay &&
+              !el.loadingOverlay.classList.contains("fade-out")
+            ) {
+              el.loadingOverlay.classList.add("fade-out");
             }
             if (el.hudResolution && msg.width && msg.height) {
               el.hudResolution.textContent = `${msg.width}x${msg.height}`;
@@ -5164,23 +5840,23 @@ async function startPlayerStream(streamUrl) {
             }
             break;
 
-          case 'AUDIO_FRAME':
+          case "AUDIO_FRAME":
             if (playerState.audioPlayer) {
               playerState.audioPlayer.queueAudio(
                 msg.left,
                 msg.right,
                 msg.pts,
-                msg.sampleRate || 48000
+                msg.sampleRate || 48000,
               );
             }
             if (el.hudAudioCodec && msg.sampleRate) {
-              const sr = (msg.sampleRate / 1000).toFixed(1) + ' kHz';
-              const ch = msg.channels ? ` (${msg.channels}ch)` : '';
+              const sr = (msg.sampleRate / 1000).toFixed(1) + " kHz";
+              const ch = msg.channels ? ` (${msg.channels}ch)` : "";
               el.hudAudioCodec.textContent = `AC-3 ${sr}${ch}`;
             }
             break;
 
-          case 'STATS': {
+          case "STATS": {
             const stats = msg.stats;
             const now = performance.now();
             const dt = (now - playerState.lastStatsTime) / 1000.0;
@@ -5196,27 +5872,30 @@ async function startPlayerStream(streamUrl) {
                 el.hudDropped.textContent = stats.packetsDropped.toString();
               }
               if (el.hudSync && stats.avSkewMs !== undefined) {
-                const sign = stats.avSkewMs >= 0 ? '+' : '';
+                const sign = stats.avSkewMs >= 0 ? "+" : "";
                 el.hudSync.textContent = `${sign}${stats.avSkewMs} ms`;
               }
             }
             break;
           }
 
-          case 'ERROR':
-            console.warn('Worker reported stream error:', msg.message);
+          case "ERROR":
+            console.warn("Worker reported stream error:", msg.message);
             break;
         }
       };
 
       playerState.worker.onerror = function (err) {
-        console.error('Player worker error:', err);
+        console.error("Player worker error:", err);
       };
 
-      playerState.worker.postMessage({ type: 'INIT' });
+      playerState.worker.postMessage({ type: "INIT" });
       useWorker = true;
     } catch (workerErr) {
-      console.warn('Web Worker creation failed, using main-thread fallback:', workerErr);
+      console.warn(
+        "Web Worker creation failed, using main-thread fallback:",
+        workerErr,
+      );
     }
   }
 
@@ -5224,11 +5903,14 @@ async function startPlayerStream(streamUrl) {
   if (!useWorker) {
     let videoDecoder = null;
     let audioDecoder = null;
-    if (typeof MPEG2VideoDecoder !== 'undefined') {
+    if (typeof MPEG2VideoDecoder !== "undefined") {
       videoDecoder = new MPEG2VideoDecoder({
         onFrame: (frame) => {
-          if (el.loadingOverlay && !el.loadingOverlay.classList.contains('fade-out')) {
-            el.loadingOverlay.classList.add('fade-out');
+          if (
+            el.loadingOverlay &&
+            !el.loadingOverlay.classList.contains("fade-out")
+          ) {
+            el.loadingOverlay.classList.add("fade-out");
           }
           if (el.hudResolution && frame.width && frame.height) {
             el.hudResolution.textContent = `${frame.width}x${frame.height}`;
@@ -5239,30 +5921,41 @@ async function startPlayerStream(streamUrl) {
         },
       });
     }
-    if (typeof AC3AudioDecoder !== 'undefined') {
+    if (typeof AC3AudioDecoder !== "undefined") {
       audioDecoder = new AC3AudioDecoder({
         onAudio: (audio) => {
           if (playerState.audioPlayer) {
-            playerState.audioPlayer.queueAudio(audio.left, audio.right, audio.pts, audio.sampleRate);
+            playerState.audioPlayer.queueAudio(
+              audio.left,
+              audio.right,
+              audio.pts,
+              audio.sampleRate,
+            );
           }
         },
       });
     }
 
-    if (typeof ATSCDemuxer !== 'undefined') {
+    if (typeof ATSCDemuxer !== "undefined") {
       playerState.demuxer = new ATSCDemuxer({
         onPAT: () => {
-          if (el.loadingText) el.loadingText.textContent = 'Found Program (PAT)...';
+          if (el.loadingText)
+            el.loadingText.textContent = "Found Program (PAT)...";
         },
         onPMT: () => {
-          if (el.loadingText) el.loadingText.textContent = 'Found Stream Map (PMT)...';
+          if (el.loadingText)
+            el.loadingText.textContent = "Found Stream Map (PMT)...";
           if (el.hudVideoCodec && playerState.demuxer.videoStreamType) {
             el.hudVideoCodec.textContent =
-              playerState.demuxer.videoStreamType === 0x02 ? 'MPEG-2 Video' : 'H.264 Video';
+              playerState.demuxer.videoStreamType === 0x02
+                ? "MPEG-2 Video"
+                : "H.264 Video";
           }
           if (el.hudAudioCodec && playerState.demuxer.audioStreamType) {
             el.hudAudioCodec.textContent =
-              playerState.demuxer.audioStreamType === 0x81 ? 'AC-3 Dolby Digital' : 'Audio';
+              playerState.demuxer.audioStreamType === 0x81
+                ? "AC-3 Dolby Digital"
+                : "Audio";
           }
         },
         onVideoData: ({ pts, data }) => {
@@ -5279,15 +5972,17 @@ async function startPlayerStream(streamUrl) {
             const mbps = (dBytes * 8) / (dt * 1000000);
             playerState.lastStatsTime = now;
             playerState.lastStatsBytes = stats.bytesParsed;
-            if (el.hudBitrate) el.hudBitrate.textContent = `${mbps.toFixed(1)} Mbps`;
-            if (el.hudDropped) el.hudDropped.textContent = stats.packetsDropped.toString();
+            if (el.hudBitrate)
+              el.hudBitrate.textContent = `${mbps.toFixed(1)} Mbps`;
+            if (el.hudDropped)
+              el.hudDropped.textContent = stats.packetsDropped.toString();
             if (el.hudSync) {
-              const sign = stats.avSkewMs >= 0 ? '+' : '';
+              const sign = stats.avSkewMs >= 0 ? "+" : "";
               el.hudSync.textContent = `${sign}${stats.avSkewMs} ms`;
             }
           }
         },
-        onError: (err) => console.warn('Demuxer error:', err),
+        onError: (err) => console.warn("Demuxer error:", err),
       });
     }
   }
@@ -5309,12 +6004,20 @@ async function startPlayerStream(streamUrl) {
       if (value && value.byteLength > 0) {
         if (playerState.worker) {
           let chunkBuf;
-          if (value.byteOffset === 0 && value.byteLength === value.buffer.byteLength) {
+          if (
+            value.byteOffset === 0 &&
+            value.byteLength === value.buffer.byteLength
+          ) {
             chunkBuf = value.buffer;
           } else {
-            chunkBuf = value.buffer.slice(value.byteOffset, value.byteOffset + value.byteLength);
+            chunkBuf = value.buffer.slice(
+              value.byteOffset,
+              value.byteOffset + value.byteLength,
+            );
           }
-          playerState.worker.postMessage({ type: 'CHUNK', chunk: chunkBuf }, [chunkBuf]);
+          playerState.worker.postMessage({ type: "CHUNK", chunk: chunkBuf }, [
+            chunkBuf,
+          ]);
         } else if (playerState.demuxer) {
           playerState.demuxer.push(value);
         }
@@ -5322,20 +6025,23 @@ async function startPlayerStream(streamUrl) {
     }
   } catch (err) {
     if (signal.aborted) return;
-    console.error('Player streaming error:', err);
+    console.error("Player streaming error:", err);
     if (el.loadingText) {
-      if (window.location.protocol === 'https:' && streamUrl.startsWith('http:')) {
+      if (
+        window.location.protocol === "https:" &&
+        streamUrl.startsWith("http:")
+      ) {
         el.loadingText.innerHTML = `Mixed content blocked by browser.<br/><span style="font-size: 0.8rem; opacity: 0.85;">In Chrome, click the tune/settings icon in the URL bar → <strong>Site settings</strong> → set <strong>Insecure content</strong> to <strong>Allow</strong>.</span>`;
       } else {
         el.loadingText.textContent = `Streaming error: ${err.message || err}`;
       }
     }
     if (el.loadingOverlay) {
-      el.loadingOverlay.classList.remove('fade-out');
+      el.loadingOverlay.classList.remove("fade-out");
     }
   } finally {
     if (playerState.worker) {
-      playerState.worker.postMessage({ type: 'FLUSH' });
+      playerState.worker.postMessage({ type: "FLUSH" });
     } else if (playerState.demuxer) {
       playerState.demuxer.flush();
     }
@@ -5348,11 +6054,11 @@ function toggleMiniPlayer() {
 
   playerState.isMini = !playerState.isMini;
   if (playerState.isMini) {
-    el.layer.classList.add('mini');
-    if (el.btnMinimize) el.btnMinimize.textContent = '🗖 Expand';
+    el.layer.classList.add("mini");
+    if (el.btnMinimize) el.btnMinimize.textContent = "🗖 Expand";
   } else {
-    el.layer.classList.remove('mini');
-    if (el.btnMinimize) el.btnMinimize.textContent = '🗕 Mini';
+    el.layer.classList.remove("mini");
+    if (el.btnMinimize) el.btnMinimize.textContent = "🗕 Mini";
   }
 }
 
@@ -5383,11 +6089,12 @@ function togglePlayerStats() {
 
   playerState.showStats = !playerState.showStats;
   if (playerState.showStats) {
-    el.statsHud.classList.remove('hidden');
-    if (el.btnStats) el.btnStats.style.backgroundColor = 'rgba(16, 185, 129, 0.25)';
+    el.statsHud.classList.remove("hidden");
+    if (el.btnStats)
+      el.btnStats.style.backgroundColor = "rgba(16, 185, 129, 0.25)";
   } else {
-    el.statsHud.classList.add('hidden');
-    if (el.btnStats) el.btnStats.style.backgroundColor = '';
+    el.statsHud.classList.add("hidden");
+    if (el.btnStats) el.btnStats.style.backgroundColor = "";
   }
 }
 
@@ -5395,14 +6102,14 @@ function togglePlayerRatio() {
   const el = getPlayerElements();
   if (!el.viewport || !el.btnRatio) return;
 
-  if (playerState.aspectRatio === '16:9') {
-    playerState.aspectRatio = '4:3';
-    el.viewport.classList.add('ratio-4-3');
-    el.btnRatio.textContent = '4:3';
+  if (playerState.aspectRatio === "16:9") {
+    playerState.aspectRatio = "4:3";
+    el.viewport.classList.add("ratio-4-3");
+    el.btnRatio.textContent = "4:3";
   } else {
-    playerState.aspectRatio = '16:9';
-    el.viewport.classList.remove('ratio-4-3');
-    el.btnRatio.textContent = '16:9';
+    playerState.aspectRatio = "16:9";
+    el.viewport.classList.remove("ratio-4-3");
+    el.btnRatio.textContent = "16:9";
   }
 }
 
@@ -5411,35 +6118,44 @@ function initPlayerCanvas() {
   if (!el.canvas) return;
 
   // 1. Initialize WebGL Video Renderer if not already created
-  if (!playerState.renderer && typeof WebGLVideoRenderer !== 'undefined') {
+  if (!playerState.renderer && typeof WebGLVideoRenderer !== "undefined") {
     try {
       playerState.renderer = new WebGLVideoRenderer(el.canvas);
       playerState.renderer.clear();
     } catch (glErr) {
-      console.warn('WebGL initialization failed:', glErr);
+      console.warn("WebGL initialization failed:", glErr);
     }
   }
 
   // 2. Initialize Web Audio Player if not already created
-  if (!playerState.audioPlayer && typeof WebAudioPlayer !== 'undefined') {
+  if (!playerState.audioPlayer && typeof WebAudioPlayer !== "undefined") {
     try {
       playerState.audioPlayer = new WebAudioPlayer({
         volume: playerState.volume,
         isMuted: playerState.isMuted,
       });
     } catch (audioErr) {
-      console.warn('Web Audio initialization failed:', audioErr);
+      console.warn("Web Audio initialization failed:", audioErr);
     }
   }
 
   // 3. Initialize AV Synchronizer if not already created
-  if (!playerState.sync && typeof AVSynchronizer !== 'undefined' && playerState.renderer) {
-    playerState.sync = new AVSynchronizer(playerState.renderer, playerState.audioPlayer, {
-      onFrameStats: (stats) => {
-        if (el.hudFps) el.hudFps.textContent = stats.fps.toString();
-        if (el.hudDropped) el.hudDropped.textContent = stats.dropped.toString();
+  if (
+    !playerState.sync &&
+    typeof AVSynchronizer !== "undefined" &&
+    playerState.renderer
+  ) {
+    playerState.sync = new AVSynchronizer(
+      playerState.renderer,
+      playerState.audioPlayer,
+      {
+        onFrameStats: (stats) => {
+          if (el.hudFps) el.hudFps.textContent = stats.fps.toString();
+          if (el.hudDropped)
+            el.hudDropped.textContent = stats.dropped.toString();
+        },
       },
-    });
+    );
   }
 }
 
@@ -5447,15 +6163,18 @@ function setupPlayerEventListeners() {
   const el = getPlayerElements();
   if (!el.layer) return;
 
-  if (el.btnClose) el.btnClose.addEventListener('click', closePlayer);
-  if (el.btnMinimize) el.btnMinimize.addEventListener('click', toggleMiniPlayer);
-  if (el.btnFullscreen) el.btnFullscreen.addEventListener('click', togglePlayerFullscreen);
-  if (el.btnFsBottom) el.btnFsBottom.addEventListener('click', togglePlayerFullscreen);
-  if (el.btnStats) el.btnStats.addEventListener('click', togglePlayerStats);
-  if (el.btnRatio) el.btnRatio.addEventListener('click', togglePlayerRatio);
+  if (el.btnClose) el.btnClose.addEventListener("click", closePlayer);
+  if (el.btnMinimize)
+    el.btnMinimize.addEventListener("click", toggleMiniPlayer);
+  if (el.btnFullscreen)
+    el.btnFullscreen.addEventListener("click", togglePlayerFullscreen);
+  if (el.btnFsBottom)
+    el.btnFsBottom.addEventListener("click", togglePlayerFullscreen);
+  if (el.btnStats) el.btnStats.addEventListener("click", togglePlayerStats);
+  if (el.btnRatio) el.btnRatio.addEventListener("click", togglePlayerRatio);
 
   if (el.btnPlayPause) {
-    el.btnPlayPause.addEventListener('click', () => {
+    el.btnPlayPause.addEventListener("click", () => {
       if (playerState.isPlaying) {
         stopPlayerStream();
       } else if (playerState.channel && playerState.channel.url) {
@@ -5465,7 +6184,7 @@ function setupPlayerEventListeners() {
   }
 
   if (el.btnJumpLive) {
-    el.btnJumpLive.addEventListener('click', () => {
+    el.btnJumpLive.addEventListener("click", () => {
       if (playerState.channel && playerState.channel.url) {
         startPlayerStream(playerState.channel.url);
       }
@@ -5473,12 +6192,12 @@ function setupPlayerEventListeners() {
   }
 
   if (el.btnMute) {
-    el.btnMute.addEventListener('click', () => {
+    el.btnMute.addEventListener("click", () => {
       playerState.isMuted = !playerState.isMuted;
       if (playerState.audioPlayer) {
         playerState.audioPlayer.setMuted(playerState.isMuted);
       }
-      el.btnMute.textContent = playerState.isMuted ? '🔇' : '🔊';
+      el.btnMute.textContent = playerState.isMuted ? "🔇" : "🔊";
       if (el.volumeSlider) {
         el.volumeSlider.value = playerState.isMuted ? 0 : playerState.volume;
       }
@@ -5486,7 +6205,7 @@ function setupPlayerEventListeners() {
   }
 
   if (el.volumeSlider) {
-    el.volumeSlider.addEventListener('input', (e) => {
+    el.volumeSlider.addEventListener("input", (e) => {
       const val = parseFloat(e.target.value);
       playerState.volume = val;
       playerState.isMuted = val === 0;
@@ -5494,31 +6213,31 @@ function setupPlayerEventListeners() {
         playerState.audioPlayer.setVolume(val);
         playerState.audioPlayer.setMuted(val === 0);
       }
-      if (el.btnMute) el.btnMute.textContent = val === 0 ? '🔇' : '🔊';
+      if (el.btnMute) el.btnMute.textContent = val === 0 ? "🔇" : "🔊";
     });
   }
 
   // Keyboard navigation for player
-  document.addEventListener('keydown', (e) => {
+  document.addEventListener("keydown", (e) => {
     if (!playerState.isOpen) return;
-    if (e.key === 'Escape') {
+    if (e.key === "Escape") {
       if (document.fullscreenElement) {
         document.exitFullscreen();
       } else {
         closePlayer();
       }
-    } else if (e.key === 'm' || e.key === 'M') {
+    } else if (e.key === "m" || e.key === "M") {
       if (el.btnMute) el.btnMute.click();
-    } else if (e.key === 'f' || e.key === 'F') {
+    } else if (e.key === "f" || e.key === "F") {
       togglePlayerFullscreen();
-    } else if (e.key === ' ') {
+    } else if (e.key === " ") {
       e.preventDefault();
       if (el.btnPlayPause) el.btnPlayPause.click();
     }
   });
 
   // Close player when clicking backdrop overlay (only in full window mode)
-  el.layer.addEventListener('click', (e) => {
+  el.layer.addEventListener("click", (e) => {
     if (e.target === el.layer && !playerState.isMini) {
       closePlayer();
     }

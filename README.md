@@ -98,12 +98,7 @@ Centralized hardware management, multi-device switching, theme customization, an
 * **Hardware Overview:** View model number (`HDFX-4K`), Device ID, firmware version, tuner count, channel totals, mDNS hostname, active streaming clients, active recording tasks, and connected storage.
 * **Firmware Update Checker:** Automatically compares your tuner's firmware against the latest SiliconDust release, displaying `✓ Up to date` or `Update Available` with direct links to the device web admin and official changelogs.
 * **Multi-Device Support:** Save multiple HDHomeRun tuners on your network. Switch between units with a single click or run discovery anytime.
-* **Theme Customization:** Choose from 5 themes designed for all environments:
-  * 🌙 **Dark (Default):** Clean modern slate and cyan palette.
-  * ☀️ **Light:** High-contrast daylight interface.
-  * 🖤 **OLED Black:** Pitch-black background optimized for OLED displays and low power draw.
-  * 🌊 **Teal:** Classic SiliconDust brand aesthetic.
-  * ❄️ **Nord Frost:** Cool arctic blues and muted slate.
+* **PodNest Theme:** A single dark theme matching the [PodNest](https://podnest.app) look — deep navy, blue/cyan accents, Space Grotesk / JetBrains Mono / Orbitron typography.
 * **Preferences & Safety:**
   * **Confirm Recording Deletions:** Toggle confirmation dialogs when deleting episodes or series to prevent accidental file loss.
 * **Privacy-Safe Diagnostic Export:**
@@ -151,6 +146,7 @@ The **DVR & Recordings** tab automatically activates if your HDHomeRun has an at
 ## 🔒 Privacy & Security
 
 * **100% Client-Side:** HDHR Dash contains no analytics, tracking scripts, or telemetry.
+* **Web Fonts:** Typography is loaded from Google Fonts (`fonts.googleapis.com` / `fonts.gstatic.com`); no other tuner or user data leaves your network.
 * **Direct LAN Communication:** All network requests travel directly between your web browser and your HDHomeRun tuner across your local home network. No video streams or tuner data pass through external servers.
 * **No Accounts or Logins:** No registration, cookies, or subscriptions required.
 * **Safe Diagnostic Sharing:** The built-in log collector includes an automatic redaction toggle to scrub private serial numbers, cloud auth tokens, and IP addresses before sharing logs online.
