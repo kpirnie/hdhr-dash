@@ -4,8 +4,8 @@
   "description": "Monitor and interact with HDHomeRun tuners and DVR recordings on your local LAN",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#0b1120",
-  "theme_color": "#0b1120",
+  "background_color": "#070e20",
+  "theme_color": "#070e20",
   "icons": [
     {
       "src": "icon.svg",
