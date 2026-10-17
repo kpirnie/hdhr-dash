@@ -48,6 +48,24 @@ function uiSpinner(ratio = 0.5) {
   return `<span uk-spinner="ratio: ${ratio}"></span>`;
 }
 
+
+/**
+ * Routes plain-HTTP device URLs through the dashboard server's same-origin proxy,
+ * so device requests work from HTTPS pages and behind TLS reverse proxies.
+ */
+function hdhrUrl(url) {
+  if (typeof url !== 'string' || !url.startsWith('http://')) return url;
+  const hostHint = state.currentIp ? `&host=${encodeURIComponent(state.currentIp)}` : '';
+  return `./api/proxy?url=${encodeURIComponent(url)}${hostHint}`;
+}
+
+/**
+ * fetch() wrapper for HDHomeRun device requests (see hdhrUrl).
+ */
+function hdhrFetch(url, options) {
+  return fetch(hdhrUrl(url), options);
+}
+
 /**
  * Calculates broadcast band (UHF / VHF), band detail, and physical RF channel number
  * based on standard ATSC broadcast frequency (in Hz).
@@ -591,7 +609,7 @@ async function refreshActiveTab() {
       } else {
         updateLineupStats();
         try {
-          const statusRes = await fetch(`http://${state.currentIp}/status.json`);
+          const statusRes = await hdhrFetch(`http://${state.currentIp}/status.json`);
           if (statusRes.ok) {
             const statusItems = await statusRes.json();
             if (Array.isArray(statusItems)) state.tuners = statusItems;
@@ -744,7 +762,7 @@ async function loadDeviceDetails() {
   }
 
   try {
-    const res = await fetch(`http://${ip}/discover.json`);
+    const res = await hdhrFetch(`http://${ip}/discover.json`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     state.deviceInfo = data;
@@ -1162,7 +1180,7 @@ async function updateSystemLiveStatus() {
     // 1. Fetch status.json for live tuner and session info
     let statusItems = [];
     try {
-      const statusRes = await fetch(`http://${ip}/status.json`);
+      const statusRes = await hdhrFetch(`http://${ip}/status.json`);
       if (statusRes.ok) {
         statusItems = await statusRes.json();
         if (Array.isArray(statusItems)) {
@@ -1269,7 +1287,7 @@ async function discoverLocalMdns() {
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 2500);
-    const res = await fetch('http://hdhomerun.local/discover.json', { signal: controller.signal });
+    const res = await hdhrFetch('http://hdhomerun.local/discover.json', { signal: controller.signal });
     clearTimeout(timeoutId);
     if (!res.ok) return null;
     const data = await res.json();
@@ -1579,7 +1597,7 @@ async function fetchTuners() {
     if (state.hasDvr && state.episodes.length === 0) {
       fetchRecordings(true);
     }
-    const res = await fetch(`http://${ip}/status.json`);
+    const res = await hdhrFetch(`http://${ip}/status.json`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const tuners = await res.json();
     state.tuners = tuners;
@@ -1961,7 +1979,7 @@ async function pollTunerDetail() {
 
   try {
     const ip = state.currentIp;
-    const res = await fetch(`http://${ip}/status.json`);
+    const res = await hdhrFetch(`http://${ip}/status.json`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const statusItems = await res.json();
     state.tuners = statusItems;
@@ -2448,7 +2466,7 @@ async function updateRecordingsLiveStatus() {
   const ip = state.currentIp;
   if (!ip) return;
   try {
-    const statusRes = await fetch(`http://${ip}/status.json`);
+    const statusRes = await hdhrFetch(`http://${ip}/status.json`);
     if (!statusRes.ok) return;
     const statusItems = await statusRes.json();
     if (!Array.isArray(statusItems)) return;
@@ -2464,7 +2482,7 @@ async function updateLineupLiveStatus() {
   const ip = state.currentIp;
   if (!ip) return;
   try {
-    const statusRes = await fetch(`http://${ip}/status.json`);
+    const statusRes = await hdhrFetch(`http://${ip}/status.json`);
     if (!statusRes.ok) return;
     const statusItems = await statusRes.json();
     if (!Array.isArray(statusItems)) return;
@@ -2713,12 +2731,12 @@ async function fetchLineup(isBackground = false) {
   lineupFetchPromise = (async () => {
     try {
       // Concurrently fetch lineup with tuning info (for frequencies) and status
-      let lineupRes = await fetch(`http://${ip}/lineup.json?show=found&tuning`).catch(() => null);
+      let lineupRes = await hdhrFetch(`http://${ip}/lineup.json?show=found&tuning`).catch(() => null);
       if (!lineupRes || !lineupRes.ok) {
-        lineupRes = await fetch(`http://${ip}/lineup.json?show=found`);
+        lineupRes = await hdhrFetch(`http://${ip}/lineup.json?show=found`);
       }
 
-      const statusRes = await fetch(`http://${ip}/status.json`).catch(() => null);
+      const statusRes = await hdhrFetch(`http://${ip}/status.json`).catch(() => null);
 
       if (!lineupRes.ok) throw new Error(`HTTP ${lineupRes.status}`);
       const lineup = await lineupRes.json();
@@ -3303,7 +3321,7 @@ async function refreshStorageUsage() {
   for (const endpoint of uniqueEndpoints) {
     try {
       const cacheBustUrl = endpoint + (endpoint.includes('?') ? '&' : '?') + `_t=${Date.now()}`;
-      const res = await fetch(cacheBustUrl, { cache: 'no-cache' });
+      const res = await hdhrFetch(cacheBustUrl, { cache: 'no-cache' });
       if (res.ok) {
         const data = await res.json();
         if (data.TotalSpace && typeof data.FreeSpace === 'number') {
@@ -3356,12 +3374,12 @@ async function fetchRecordings(isBackground = false) {
   let targetUrl = getDvrRecordedFilesUrl(ip);
 
   try {
-    let res = await fetch(targetUrl);
+    let res = await hdhrFetch(targetUrl);
 
     // Fallback: if port 80 failed and no explicit StorageURL was configured, try port 4999
     if (!res.ok && !state.dvrStorageUrl) {
       try {
-        const altRes = await fetch(`http://${ip}:4999/recorded_files.json`);
+        const altRes = await hdhrFetch(`http://${ip}:4999/recorded_files.json`);
         if (altRes.ok) {
           res = altRes;
           state.dvrStorageUrl = `http://${ip}:4999/recorded_files.json`;
@@ -3389,7 +3407,7 @@ async function fetchRecordings(isBackground = false) {
     const episodePromises = seriesData.map(async (item) => {
       if (item.EpisodesURL) {
         try {
-          const epRes = await fetch(item.EpisodesURL);
+          const epRes = await hdhrFetch(item.EpisodesURL);
           if (epRes.ok) {
             const epJson = await epRes.json();
             return Array.isArray(epJson) ? epJson : [];
@@ -3417,7 +3435,7 @@ async function fetchRecordings(isBackground = false) {
 
     // Fetch live status to identify any active playback sessions
     try {
-      const statusRes = await fetch(`http://${ip}/status.json`);
+      const statusRes = await hdhrFetch(`http://${ip}/status.json`);
       if (statusRes.ok) {
         const statusItems = await statusRes.json();
         if (Array.isArray(statusItems)) {
@@ -3607,7 +3625,7 @@ function renderEpisodes(episodes) {
 
       <div class="recording-actions">
         ${playUrl ? `
-          <a href="${playUrl}" download="${suggestedFilename}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-primary" title="Download the full recorded video file (${suggestedFilename})">
+          <a href="${hdhrUrl(playUrl)}" download="${suggestedFilename}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-primary" title="Download the full recorded video file (${suggestedFilename})">
             ${uiIcon('download', 0.75)} Download (.mpg)
           </a>
           <button class="btn btn-sm btn-secondary btn-copy-url" data-url="${playUrl}" title="Copy direct download link (for curl, wget, or download managers)">
@@ -3629,7 +3647,7 @@ function renderEpisodes(episodes) {
 
     // Asynchronously query HEAD on playUrl to get exact Content-Length if available
     if (!rawBytes && playUrl) {
-      fetch(playUrl, { method: 'HEAD' })
+      hdhrFetch(playUrl, { method: 'HEAD' })
         .then((res) => {
           const cl = res.headers.get('content-length');
           if (cl) {
@@ -3896,7 +3914,7 @@ async function deleteEpisode(ep) {
 
   const deleteUrl = ep.CmdURL + (ep.CmdURL.includes('?') ? '&' : '?') + 'cmd=delete&rerecord=0';
   try {
-    const res = await fetch(deleteUrl, { method: 'POST' });
+    const res = await hdhrFetch(deleteUrl, { method: 'POST' });
     if (!res.ok) {
       throw new Error(`Device returned HTTP ${res.status}`);
     }
@@ -3932,7 +3950,7 @@ async function deleteSeries(series, matchingEpisodes) {
     if (ep.CmdURL) {
       try {
         const deleteUrl = ep.CmdURL + (ep.CmdURL.includes('?') ? '&' : '?') + 'cmd=delete&rerecord=0';
-        const res = await fetch(deleteUrl, { method: 'POST' });
+        const res = await hdhrFetch(deleteUrl, { method: 'POST' });
         if (res.ok) {
           deletedCount++;
           state.episodes = state.episodes.filter((e) => e.CmdURL !== ep.CmdURL && e.PlayURL !== ep.PlayURL);
@@ -4174,7 +4192,7 @@ async function fetchDiagnosticEndpoint(url, timeoutMs = 4500) {
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
   const startTime = performance.now();
   try {
-    const res = await fetch(url, { signal: controller.signal });
+    const res = await hdhrFetch(url, { signal: controller.signal });
     clearTimeout(timeoutId);
     const elapsedMs = Math.round(performance.now() - startTime);
     if (!res.ok) {
@@ -4996,7 +5014,7 @@ function startTunerStatusPolling() {
   async function poll() {
     if (!playerState.isOpen || !playerState.isPlaying || !state.currentIp) return;
     try {
-      const res = await fetch(`http://${state.currentIp}/status.json`);
+      const res = await hdhrFetch(`http://${state.currentIp}/status.json`);
       if (!res.ok) return;
       const tuners = await res.json();
       if (!Array.isArray(tuners)) return;
@@ -5278,7 +5296,7 @@ async function startPlayerStream(streamUrl) {
 
   // 3. Network ingestion on Main Thread (inherits document permissions and private network access)
   try {
-    const res = await fetch(streamUrl, { signal });
+    const res = await hdhrFetch(streamUrl, { signal });
     if (!res.ok) {
       throw new Error(`HTTP ${res.status}: ${res.statusText}`);
     }

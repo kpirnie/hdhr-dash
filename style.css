@@ -493,7 +493,7 @@ a.btn:hover,
     top: 0;
     left: 0;
     bottom: 0;
-    width: 260px;
+    width: 300px;
     flex-direction: column;
     flex-wrap: nowrap;
     align-items: stretch;

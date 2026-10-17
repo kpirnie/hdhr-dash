@@ -62,8 +62,10 @@ self.addEventListener("fetch", (event) => {
 
   // Never intercept HDHomeRun LAN API calls, external APIs, or non-origin requests
   if (
-    !url.protocol.startsWith("http") ||
-    url.hostname !== self.location.hostname
+    !url.protocol.startsWith('http') ||
+    url.hostname !== self.location.hostname ||
+    url.pathname.includes('/api/') ||
+    event.request.method !== 'GET'
   ) {
     return;
   }

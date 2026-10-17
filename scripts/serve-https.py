@@ -13,12 +13,17 @@ import http.server
 import ipaddress
 import mimetypes
 import os
+import random
 import shutil
 import socket
 import ssl
+import struct
 import subprocess
 import sys
 import tempfile
+import threading
+import time
+import urllib.error
 import urllib.parse
 import urllib.request
 from pathlib import Path
@@ -31,6 +36,101 @@ mimetypes.add_type('image/svg+xml', '.svg')
 mimetypes.add_type('application/manifest+json', '.webmanifest')
 mimetypes.add_type('audio/x-mpegurl', '.m3u')
 
+MDNS_ADDR = ('224.0.0.251', 5353)
+MDNS_TIMEOUT = 0.75
+MDNS_CACHE_TTL = 60
+_mdns_cache = {}
+_mdns_lock = threading.Lock()
+
+# Upstream response headers passed back to the browser by the device proxy
+PROXY_RESPONSE_HEADERS = (
+    'Content-Type',
+    'Content-Length',
+    'Content-Range',
+    'Content-Disposition',
+    'Accept-Ranges',
+    'Last-Modified',
+)
+
+
+def is_local_host(hostname):
+    """Return True for .local names and private / loopback IP addresses."""
+    if not hostname:
+        return False
+    if hostname in ('localhost', '127.0.0.1') or hostname.endswith('.local'):
+        return True
+    try:
+        ip = ipaddress.ip_address(hostname)
+        return ip.is_private or ip.is_loopback
+    except ValueError:
+        return False
+
+
+def _skip_dns_name(data, offset):
+    """Advance past a (possibly compressed) DNS name and return the new offset."""
+    while offset < len(data):
+        length = data[offset]
+        if length == 0:
+            return offset + 1
+        if length & 0xC0 == 0xC0:
+            return offset + 2
+        offset += length + 1
+    raise ValueError("Truncated DNS name")
+
+
+def mdns_resolve(hostname):
+    """
+    Resolve a .local hostname to an IPv4 address with a one-shot multicast DNS query.
+    Only gets an answer when the container shares the host network; returns None otherwise.
+    Results (including misses) are cached for MDNS_CACHE_TTL seconds.
+    """
+    now = time.monotonic()
+    with _mdns_lock:
+        cached = _mdns_cache.get(hostname)
+        if cached and cached[1] > now:
+            return cached[0]
+
+    query_id = random.randint(0, 0xFFFF)
+    labels = hostname.rstrip('.').split('.')
+    question = b''.join(bytes([len(label)]) + label.encode('ascii') for label in labels) + b'\x00'
+    packet = struct.pack('!HHHHHH', query_id, 0, 1, 0, 0, 0) + question + struct.pack('!HH', 1, 0x8001)
+
+    result = None
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+    try:
+        sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 255)
+        sock.settimeout(MDNS_TIMEOUT)
+        sock.sendto(packet, MDNS_ADDR)
+        deadline = now + MDNS_TIMEOUT
+        while result is None and time.monotonic() < deadline:
+            try:
+                data, _ = sock.recvfrom(4096)
+            except socket.timeout:
+                break
+            if len(data) < 12:
+                continue
+            resp_id, flags, qdcount, ancount, nscount, arcount = struct.unpack('!HHHHHH', data[:12])
+            if resp_id != query_id or not flags & 0x8000:
+                continue
+            offset = 12
+            for _ in range(qdcount):
+                offset = _skip_dns_name(data, offset) + 4
+            for _ in range(ancount + nscount + arcount):
+                offset = _skip_dns_name(data, offset)
+                rtype, _, _, rdlength = struct.unpack('!HHIH', data[offset:offset + 10])
+                offset += 10
+                if rtype == 1 and rdlength == 4:
+                    result = socket.inet_ntoa(data[offset:offset + 4])
+                    break
+                offset += rdlength
+    except (OSError, ValueError, struct.error):
+        result = None
+    finally:
+        sock.close()
+
+    with _mdns_lock:
+        _mdns_cache[hostname] = (result, time.monotonic() + MDNS_CACHE_TTL)
+    return result
 
 def get_lan_ip():
     """Attempt to detect the primary local LAN IP address."""
@@ -96,10 +196,98 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         super().end_headers()
 
     def do_GET(self):
+        if self.path.startswith('/api/proxy?'):
+            self.handle_device_proxy('GET')
+            return
         if self.path.startswith('/api/stream?') or self.path == '/api/stream':
             self.handle_stream_proxy()
             return
         super().do_GET()
+
+    def do_HEAD(self):
+        if self.path.startswith('/api/proxy?'):
+            self.handle_device_proxy('HEAD')
+            return
+        super().do_HEAD()
+
+    def do_POST(self):
+        if self.path.startswith('/api/proxy?'):
+            self.handle_device_proxy('POST')
+            return
+        self.send_error(405, "Method not allowed")
+
+    def handle_device_proxy(self, method):
+        """Same-origin pass-through proxy for HDHomeRun device requests (JSON APIs, streams, commands)."""
+        parsed = urllib.parse.urlparse(self.path)
+        params = urllib.parse.parse_qs(parsed.query)
+        target_url = params.get('url', [None])[0]
+        host_hint = params.get('host', [''])[0].strip().split(':')[0]
+
+        if not target_url:
+            self.send_error(400, "Missing 'url' query parameter")
+            return
+
+        target = urllib.parse.urlparse(target_url)
+        if target.scheme != 'http' or not target.hostname:
+            self.send_error(400, "Only plain 'http' device URLs are supported")
+            return
+
+        hostname = target.hostname
+        if not is_local_host(hostname):
+            self.send_error(403, f"Proxying forbidden for non-local host: {hostname}")
+            return
+
+        # .local names: resolve via mDNS (host networking), else fall back to the active device IP
+        if hostname.endswith('.local'):
+            resolved = mdns_resolve(hostname)
+            if not resolved and host_hint and not host_hint.endswith('.local') and is_local_host(host_hint):
+                resolved = host_hint
+            if not resolved:
+                self.send_error(502, f"Unable to resolve {hostname}")
+                return
+            netloc = f"{resolved}:{target.port}" if target.port else resolved
+            target_url = urllib.parse.urlunparse(target._replace(netloc=netloc))
+
+        body = None
+        if method == 'POST':
+            length = int(self.headers.get('Content-Length') or 0)
+            body = self.rfile.read(length) if length > 0 else b''
+
+        req = urllib.request.Request(target_url, data=body, method=method, headers={'User-Agent': 'HDHR-Dash/2.0'})
+        if body and self.headers.get('Content-Type'):
+            req.add_header('Content-Type', self.headers.get('Content-Type'))
+        if self.headers.get('Range'):
+            req.add_header('Range', self.headers.get('Range'))
+
+        try:
+            upstream = urllib.request.urlopen(req, timeout=10)
+        except urllib.error.HTTPError as e:
+            upstream = e
+        except Exception as e:
+            self.send_error(502, f"Failed to reach device: {e}")
+            return
+
+        try:
+            self.send_response(getattr(upstream, 'status', None) or upstream.code)
+            for name in PROXY_RESPONSE_HEADERS:
+                value = upstream.headers.get(name)
+                if value:
+                    self.send_header(name, value)
+            self.send_header('Cache-Control', 'no-store')
+            self.send_header('Connection', 'close')
+            self.end_headers()
+
+            if method != 'HEAD':
+                while True:
+                    chunk = upstream.read(65536)
+                    if not chunk:
+                        break
+                    self.wfile.write(chunk)
+                    self.wfile.flush()
+        except (BrokenPipeError, ConnectionResetError):
+            pass
+        finally:
+            upstream.close()
 
     def handle_stream_proxy(self):
         """Pass-through streaming proxy for local HDHomeRun tuner streams over HTTP."""
@@ -218,7 +406,7 @@ def main():
 
     # Initialize SSL context
     server_address = (args.bind, args.port)
-    httpd = http.server.HTTPServer(server_address, CustomHTTPRequestHandler)
+    httpd = http.server.ThreadingHTTPServer(server_address, CustomHTTPRequestHandler)
 
     # Initialize SSL context
     if not args.http:
