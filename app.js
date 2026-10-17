@@ -289,6 +289,19 @@ const btnCancelDelete = document.getElementById('btn-cancel-delete');
 const btnProceedDelete = document.getElementById('btn-proceed-delete');
 const modalCloseBtn = document.getElementById('modal-close-btn');
 
+// Channel Scan Elements
+const btnScanChannels = document.getElementById('btn-scan-channels');
+const lineupScanCard = document.getElementById('lineup-scan-card');
+const lineupScanText = document.getElementById('lineup-scan-text');
+const lineupScanFill = document.getElementById('lineup-scan-fill');
+const btnAbortScan = document.getElementById('btn-abort-scan');
+const modalScanChannels = document.getElementById('modal-scan-channels');
+const scanBusyWarning = document.getElementById('scan-busy-warning');
+const scanSourceSelect = document.getElementById('scan-source-select');
+const btnStartScan = document.getElementById('btn-start-scan');
+const btnCancelScan = document.getElementById('btn-cancel-scan');
+const btnScanModalClose = document.getElementById('btn-scan-modal-close');
+
 /* ==========================================================================
    Initialization
    ========================================================================== */
@@ -299,6 +312,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupTunerDetailEvents();
   setupChartInteractions();
   setupLineupFilters();
+  setupChannelScan();
   setupPlayerEventListeners();
   setupDvrPills();
   setupDeviceManagement();
@@ -600,6 +614,7 @@ async function refreshActiveTab() {
       await fetchTuners();
       break;
     case 'lineup':
+      checkScanInProgress();
       if (state.deviceInfo?.StorageID && !state.deviceInfo?.TunerCount) {
         state.lineup = [];
         if (lineupCountBadge) lineupCountBadge.classList.add('hidden');
@@ -3977,6 +3992,151 @@ async function deleteSeries(series, matchingEpisodes) {
     await fetchRecordings(true);
     await refreshStorageUsage();
   }, 1000);
+}
+
+/* ==========================================================================
+   Channel Scan
+   ========================================================================== */
+
+let scanPollTimer = null;
+let scanAborted = false;
+
+async function fetchLineupStatus() {
+  const res = await hdhrFetch(`http://${state.currentIp}/lineup_status.json?_t=${Date.now()}`);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+async function openScanModal() {
+  if (!state.currentIp) {
+    showAlert('No HDHomeRun device connected. Please configure a device IP on the System tab.', 'error');
+    return;
+  }
+
+  let status;
+  try {
+    status = await fetchLineupStatus();
+  } catch (err) {
+    showAlert(`Unable to read channel scan status from <code>${state.currentIp}</code>.`, 'error');
+    return;
+  }
+
+  if (status.ScanInProgress) {
+    startScanPolling();
+    return;
+  }
+  if (status.ScanPossible === 0) {
+    showAlert('This device does not currently allow a channel scan.', 'error');
+    return;
+  }
+
+  const sources = Array.isArray(status.SourceList) && status.SourceList.length > 0
+    ? status.SourceList
+    : [status.Source || 'Antenna'];
+  scanSourceSelect.innerHTML = sources
+    .map((src) => `<option value="${src}"${src === status.Source ? ' selected' : ''}>${src}</option>`)
+    .join('');
+
+  let tunersBusy = false;
+  try {
+    const statusRes = await hdhrFetch(`http://${state.currentIp}/status.json`);
+    if (statusRes.ok) tunersBusy = isAnyTunerActive(await statusRes.json());
+  } catch (e) {}
+
+  scanBusyWarning.classList.toggle('hidden', !tunersBusy);
+  modalScanChannels.classList.remove('hidden');
+}
+
+function hideScanModal() {
+  modalScanChannels.classList.add('hidden');
+}
+
+async function startChannelScan() {
+  const source = scanSourceSelect.value || 'Antenna';
+  hideScanModal();
+  scanAborted = false;
+  try {
+    const res = await hdhrFetch(
+      `http://${state.currentIp}/lineup.post?scan=start&source=${encodeURIComponent(source)}`,
+      { method: 'POST' }
+    );
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    startScanPolling();
+  } catch (err) {
+    showAlert(`Failed to start channel scan: ${err.message}`, 'error');
+  }
+}
+
+async function abortChannelScan() {
+  scanAborted = true;
+  if (btnAbortScan) btnAbortScan.disabled = true;
+  try {
+    await hdhrFetch(`http://${state.currentIp}/lineup.post?scan=abort`, { method: 'POST' });
+  } catch (e) {}
+  await pollScanStatus();
+}
+
+function startScanPolling() {
+  stopScanPolling();
+  lineupScanFill.style.width = '0%';
+  lineupScanText.textContent = '0% • 0 found';
+  lineupScanCard.classList.remove('hidden');
+  if (btnScanChannels) btnScanChannels.disabled = true;
+  if (btnAbortScan) btnAbortScan.disabled = false;
+  pollScanStatus();
+  scanPollTimer = setInterval(pollScanStatus, 1000);
+}
+
+function stopScanPolling() {
+  if (scanPollTimer) clearInterval(scanPollTimer);
+  scanPollTimer = null;
+}
+
+async function pollScanStatus() {
+  let status;
+  try {
+    status = await fetchLineupStatus();
+  } catch (e) {
+    return;
+  }
+
+  if (status.ScanInProgress) {
+    const progress = Math.max(0, Math.min(100, Number(status.Progress) || 0));
+    lineupScanFill.style.width = `${progress}%`;
+    lineupScanText.textContent = `${progress}% • ${Number(status.Found) || 0} found`;
+    return;
+  }
+
+  if (!scanPollTimer && lineupScanCard.classList.contains('hidden')) return;
+
+  stopScanPolling();
+  lineupScanCard.classList.add('hidden');
+  if (btnScanChannels) btnScanChannels.disabled = false;
+  showToast(scanAborted ? 'Channel scan aborted' : 'Channel scan finished');
+  scanAborted = false;
+  state.lineup = [];
+  await fetchLineup();
+}
+
+async function checkScanInProgress() {
+  if (!state.currentIp || scanPollTimer) return;
+  try {
+    const status = await fetchLineupStatus();
+    if (status.ScanInProgress) startScanPolling();
+  } catch (e) {}
+}
+
+function setupChannelScan() {
+  if (btnScanChannels) btnScanChannels.addEventListener('click', openScanModal);
+  if (btnStartScan) btnStartScan.addEventListener('click', startChannelScan);
+  if (btnCancelScan) btnCancelScan.addEventListener('click', hideScanModal);
+  if (btnScanModalClose) btnScanModalClose.addEventListener('click', hideScanModal);
+  if (btnAbortScan) btnAbortScan.addEventListener('click', abortChannelScan);
+  if (modalScanChannels) {
+    modalScanChannels.addEventListener('click', (e) => {
+      if (e.target === modalScanChannels) hideScanModal();
+    });
+  }
 }
 
 /* ==========================================================================

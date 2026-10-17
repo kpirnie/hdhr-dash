@@ -316,10 +316,27 @@
         <div class="view-header">
           <h2>Channels</h2>
           <div class="view-actions">
+            <button id="btn-scan-channels" class="btn btn-sm btn-secondary" title="Rescan the tuner's channel lineup">
+              <span uk-icon="icon: search; ratio: 0.75"></span> Scan
+            </button>
             <button id="btn-export-m3u" class="btn btn-sm btn-secondary" title="Download M3U Playlist">
-              <span uk-icon="icon: download; ratio: 0.75"></span> Export M3U
+              <span uk-icon="icon: download; ratio: 0.75"></span> M3U
             </button>
             <button id="btn-refresh-lineup" class="btn btn-sm btn-secondary"><span uk-icon="icon: refresh; ratio: 0.75"></span> Refresh</button>
+          </div>
+        </div>
+
+        <!-- Channel scan progress -->
+        <div id="lineup-scan-card" class="card mb-16 hidden">
+          <div class="storage-bar-header">
+            <span class="text-sm font-semibold"><span uk-spinner="ratio: 0.45"></span> Scanning channels...</span>
+            <span class="view-actions">
+              <span id="lineup-scan-text" class="text-sm text-muted font-mono">0% • 0 found</span>
+              <button id="btn-abort-scan" class="btn btn-xs btn-delete" title="Abort the channel scan">Abort</button>
+            </span>
+          </div>
+          <div class="metric-bar-bg">
+            <div id="lineup-scan-fill" class="metric-bar-fill good" style="width: 0%;"></div>
           </div>
         </div>
 
@@ -738,6 +755,34 @@
       <div class="modal-footer">
         <button id="btn-cancel-delete" class="btn btn-secondary">Cancel</button>
         <button id="btn-proceed-delete" class="btn btn-danger"><span uk-icon="icon: trash; ratio: 0.8"></span> Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Channel Scan Modal -->
+  <div id="modal-scan-channels" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title"><span uk-icon="icon: search; ratio: 1"></span> Scan Channels</h3>
+        <button id="btn-scan-modal-close" class="modal-close-icon" aria-label="Close"><span uk-icon="icon: close; ratio: 1"></span></button>
+      </div>
+      <div class="modal-body">
+        <p>Rescan the tuner for available channels. The channel lineup is rebuilt when the scan finishes.</p>
+        <div id="scan-busy-warning" class="diag-warning-banner hidden">
+          <span class="diag-warning-icon"><span uk-icon="icon: warning; ratio: 1"></span></span>
+          <div class="diag-warning-text">
+            <strong>Tuners are currently in use.</strong>
+            <span>A scan takes over every tuner and will interrupt live streams and recordings in progress.</span>
+          </div>
+        </div>
+        <div class="filter-menu-row mt-12">
+          <label class="filter-menu-label" for="scan-source-select">Signal Source</label>
+          <select id="scan-source-select" class="filter-menu-select"></select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-cancel-scan" class="btn btn-secondary">Cancel</button>
+        <button id="btn-start-scan" class="btn btn-primary"><span uk-icon="icon: search; ratio: 0.8"></span> Start Scan</button>
       </div>
     </div>
   </div>
