@@ -1,0 +1,25 @@
+# HDHR Dash - sample Podman compose file
+#
+#   podman-compose -f deploy/compose.yaml up -d
+#
+# HDHR_PORT and HDHR_HTTP can be set in the environment or an .env file next to this file.
+# For .local (mDNS) name resolution, comment out "ports" and uncomment "network_mode: host".
+
+services:
+  hdhr-dash:
+    image: ghcr.io/kpirnie/hdhr-dash:latest
+    container_name: hdhr-dash
+    restart: unless-stopped
+    ports:
+      - "${HDHR_PORT:-8443}:${HDHR_PORT:-8443}"
+    # network_mode: host
+    environment:
+      HDHR_PORT: "${HDHR_PORT:-8443}"
+      # true = plain HTTP (behind a TLS reverse proxy), false = self-signed HTTPS
+      HDHR_HTTP: "${HDHR_HTTP:-false}"
+    volumes:
+      - hdhr-dash-certs:/certs
+
+volumes:
+  hdhr-dash-certs:
+  
