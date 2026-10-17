@@ -1,15 +1,24 @@
 # HDHR Dash
 
-[![Build Container Image](https://github.com/kpirnie/hdhr-dash/actions/workflows/build-image.yml/badge.svg)](https://github.com/kpirnie/hdhr-dash/actions/workflows/build-image.yml)
-[![GHCR](https://img.shields.io/badge/ghcr.io-kpirnie%2Fhdhr--dash-2B8EFF?logo=github)](https://github.com/kpirnie/hdhr-dash/pkgs/container/hdhr-dash)
-[![Podman](https://img.shields.io/badge/Runs%20on-Podman-892CA0?logo=podman)](https://podman.io/)
-[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+[![Build](https://img.shields.io/github/actions/workflow/status/kpirnie/hdhr-dash/build-image.yml?branch=main&label=Main&logoColor=white&logo=github&labelColor=000&style=for-the-badge)](https://github.com/kpirnie/hdhr-dash/actions/workflows/build-image.yml)
+[![GitHub Issues](https://img.shields.io/github/issues/kpirnie/hdhr-dash?style=for-the-badge&logo=github&color=006400&logoColor=white&labelColor=000)](https://github.com/kpirnie/hdhr-dash/issues)
+[![Last Commit](https://img.shields.io/github/last-commit/kpirnie/hdhr-dash?style=for-the-badge&labelColor=000)](https://github.com/kpirnie/hdhr-dash/commits/main)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-orange.svg?style=for-the-badge&logo=opensourceinitiative&logoColor=white&labelColor=000)](LICENSE)
+[![Python](https://img.shields.io/badge/Python-3.14-3776AB?logo=python&logoColor=white&style=for-the-badge&labelColor=000)](https://python.org)
+[![Alpine](https://img.shields.io/badge/Base-Alpine%20Linux-0D597F?logo=alpinelinux&logoColor=white&style=for-the-badge&labelColor=000)](https://www.alpinelinux.org/)
+[![Podman](https://img.shields.io/badge/Runs%20on-Podman-892CA0?logo=podman&logoColor=white&style=for-the-badge&labelColor=000)](https://podman.io/)
+[![Kevin Pirnie](https://img.shields.io/badge/-KevinPirnie.com-000d2d?style=for-the-badge&labelColor=000&logoColor=white&logo=data:image/svg%2Bxml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIxLjgiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+CiAgPGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iMTAiLz4KICA8ZWxsaXBzZSBjeD0iMTIiIGN5PSIxMiIgcng9IjQuNSIgcnk9IjEwIi8+CiAgPGxpbmUgeDE9IjIiIHkxPSIxMiIgeDI9IjIyIiB5Mj0iMTIiLz4KICA8bGluZSB4MT0iNC41IiB5MT0iNi41IiB4Mj0iMTkuNSIgeTI9IjYuNSIvPgogIDxsaW5lIHgxPSI0LjUiIHkxPSIxNy41IiB4Mj0iMTkuNSIgeTI9IjE3LjUiLz4KPC9zdmc+Cg==)](https://kevinpirnie.com/)
+[![Support](https://img.shields.io/badge/Support-Available-28a745?logo=handshake&logoColor=white&style=for-the-badge&labelColor=000)](https://kevinpirnie.com/about-kevin-pirnie/lets-talk/)
 
 A self-hosted web dashboard and **Progressive Web App** for [SiliconDust HDHomeRun](https://www.silicondust.com/) network tuners and DVR recording engines — live tuner gauges, an in-browser ATSC 1.0 player, channel lineup management with scanning, DVR library management, and hardware diagnostics.
 
 It ships as a small container image and talks to your HDHomeRun through a built-in, LAN-only device proxy, so it works over HTTPS and behind a reverse proxy.
 
-> This is a fork of [jay0lee/hdhr-dash](https://github.com/jay0lee/hdhr-dash), restyled to match the [PodNest](https://podnest.app) look and reworked to run as a container.
+Styled to match [PodNest](https://podnest.app).
+
+---
+
+[Features](#features) · [Quick Start](#quick-start) · [Running](#running) · [Configuration](#configuration) · [How It Works](#how-it-works) · [Building the Image](#building-the-image) · [Need-to-Know](#need-to-know) · [Privacy & Security](#privacy--security) · [License](#license)
 
 ---
 
@@ -202,13 +211,17 @@ The Recordings tab activates when the device advertises a recording engine — a
 
 - **No analytics, tracking, or accounts.**
 - **Tuner traffic stays on your LAN** — the built-in proxy only talks to private / local addresses.
-- **External requests:** fonts from Google Fonts, the UIkit UI library from jsDelivr, the firmware check against SiliconDust, scheduled DVR rules from `api.hdhomerun.com`, and a weekly station-database refresh from this repository.
+- **External requests:** fonts from Google Fonts, the UIkit UI library from jsDelivr, the firmware check against SiliconDust, and scheduled DVR rules from `api.hdhomerun.com`.
 - **Safe diagnostics sharing** — the log collector can redact serial numbers, auth tokens, and IP addresses before you share them.
 
 ---
 
-## Credits & License
-
-Originally created by [jay0lee](https://github.com/jay0lee/hdhr-dash). Container packaging, device proxy, channel scanning, lineup management, and PodNest restyle by [Kevin Pirnie](https://github.com/kpirnie).
+## License
 
 Distributed under the Apache License 2.0. See [LICENSE](LICENSE).
+
+Based on the original HDHR Dash by jay0lee.
+
+## Support
+
+Questions, bugs, or feature requests: [open an issue](https://github.com/kpirnie/hdhr-dash/issues) or [get in touch](https://kevinpirnie.com/about-kevin-pirnie/lets-talk/).

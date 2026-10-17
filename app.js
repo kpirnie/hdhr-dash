@@ -4921,7 +4921,7 @@ function openGitHubIssue() {
     copyDiagnosticsToClipboard();
 
     const makeUrl = (bodyText) =>
-      `https://github.com/jay0lee/hdhr-dash/issues/new?title=${encodeURIComponent(title)}&body=${encodeURIComponent(bodyText)}`;
+      `https://github.com/kpirnie/hdhr-dash/issues/new?title=${encodeURIComponent(title)}&body=${encodeURIComponent(bodyText)}`;
 
     // 1. Try formatted JSON
     let jsonStr = JSON.stringify(processed, null, 2);
@@ -4989,7 +4989,7 @@ function openGitHubIssue() {
     }
   } else {
     baseBody += `### Diagnostic Logs\n<!-- Gather and attach diagnostic logs from the System tab -> Diagnostic Logs & Export -->\n`;
-    fullUrl = `https://github.com/jay0lee/hdhr-dash/issues/new?title=${encodeURIComponent(title)}&body=${encodeURIComponent(baseBody)}`;
+    fullUrl = `https://github.com/kpirnie/hdhr-dash/issues/new?title=${encodeURIComponent(title)}&body=${encodeURIComponent(baseBody)}`;
   }
 
   window.open(fullUrl, '_blank', 'noopener,noreferrer');
