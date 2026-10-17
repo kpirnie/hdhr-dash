@@ -10,7 +10,7 @@ const STORAGE_STATIONS_CACHE = 'hdhr_stations_cache';
 const STORAGE_STATIONS_LAST_SYNC = 'hdhr_stations_last_sync';
 const STORAGE_STATIONS_APP_VERSION = 'hdhr_stations_app_ver';
 const STATIONS_SYNC_INTERVAL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days (weekly)
-const APP_VERSION = '3.0.2';
+const APP_VERSION = '3.0.15';
 
 // PodNest theme colors used where CSS variables can't reach (SVG attributes)
 const THEME_COLORS = {
@@ -3089,7 +3089,7 @@ function renderLineup() {
           ${uiIcon('lock', 0.75)} DRM
         </button>
         <button class="btn btn-sm btn-secondary btn-copy-url" data-url="${streamUrl}" title="Copy Stream URL">
-          ${uiIcon('copy', 0.75)} Copy URL
+          ${uiIcon('copy', 0.75)} URL
         </button>
       `;
     } else if (isAtsc3) {
@@ -3098,10 +3098,7 @@ function renderLineup() {
           ${uiIcon('play', 0.8)} Play
         </button>
         <button class="btn btn-sm btn-primary btn-copy-url" data-url="${streamUrl}" title="Copy Stream URL to paste into VLC or media player">
-          ${uiIcon('copy', 0.75)} Copy URL
-        </button>
-        <button class="btn btn-sm btn-secondary btn-download-m3u" data-num="${ch.GuideNumber}" data-name="${ch.GuideName || ''}" data-url="${streamUrl}" title="Download .m3u stream playlist to open directly in VLC / default player">
-          ${uiIcon('tv', 0.75)} M3U
+          ${uiIcon('copy', 0.75)} URL
         </button>
       `;
     } else {
@@ -3110,10 +3107,7 @@ function renderLineup() {
           ${uiIcon('play', 0.8)} Play
         </button>
         <button class="btn btn-sm btn-primary btn-copy-url" data-url="${streamUrl}" title="Copy Stream URL to paste into VLC or media player">
-          ${uiIcon('copy', 0.75)} Copy URL
-        </button>
-        <button class="btn btn-sm btn-secondary btn-download-m3u" data-num="${ch.GuideNumber}" data-name="${ch.GuideName || ''}" data-url="${streamUrl}" title="Download .m3u stream playlist to open directly in VLC / default player">
-          ${uiIcon('tv', 0.75)} M3U
+          ${uiIcon('copy', 0.75)} URL
         </button>
       `;
     }
