@@ -177,6 +177,12 @@ def main():
     parser.add_argument("--temp", action="store_true", help="Use an ephemeral certificate that is deleted on exit")
     parser.add_argument("--cert", default=None, help="Custom certificate file path (default: cert.pem)")
     parser.add_argument("--key", default=None, help="Custom private key file path (default: key.pem)")
+    parser.add_argument(
+        "--http",
+        action="store_true",
+        default=os.environ.get("HDHR_HTTP", "").strip().lower() in ("1", "true", "yes", "on"),
+        help="Serve plain HTTP, e.g. behind a TLS-terminating reverse proxy (env: HDHR_HTTP)"
+    )
     args = parser.parse_args()
 
     # Determine project root (directory containing index.html)
@@ -187,9 +193,16 @@ def main():
     lan_ip = get_lan_ip()
     temp_dir = None
 
-    if args.cert and args.key:
+    if args.http:
+        cert_path = key_path = None
+    elif args.cert and args.key:
         cert_path = Path(args.cert).resolve()
         key_path = Path(args.key).resolve()
+        if not cert_path.exists() or not key_path.exists():
+            print(f"🔐 Generating self-signed certificate ({cert_path.name} & {key_path.name})...")
+            cert_path.parent.mkdir(parents=True, exist_ok=True)
+            key_path.parent.mkdir(parents=True, exist_ok=True)
+            generate_self_signed_cert(cert_path, key_path, lan_ip)
     elif args.temp:
         temp_dir = tempfile.TemporaryDirectory()
         cert_path = Path(temp_dir.name) / "cert.pem"
@@ -204,35 +217,45 @@ def main():
             generate_self_signed_cert(cert_path, key_path, lan_ip)
 
     # Initialize SSL context
-    ssl_ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-    ssl_ctx.load_cert_chain(certfile=str(cert_path), keyfile=str(key_path))
-
     server_address = (args.bind, args.port)
     httpd = http.server.HTTPServer(server_address, CustomHTTPRequestHandler)
-    httpd.socket = ssl_ctx.wrap_socket(httpd.socket, server_side=True)
+
+    # Initialize SSL context
+    if not args.http:
+        ssl_ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        ssl_ctx.load_cert_chain(certfile=str(cert_path), keyfile=str(key_path))
+        httpd.socket = ssl_ctx.wrap_socket(httpd.socket, server_side=True)
+
+    scheme = "http" if args.http else "https"
 
     print()
     print("=" * 68)
-    print("  🚀 HDHR Dash — Local HTTPS Server")
+    print(f"  🚀 HDHR Dash — Local {scheme.upper()} Server")
     print("=" * 68)
-    print(f"  Local:    https://localhost:{args.port}")
+    print(f"  Local:    {scheme}://localhost:{args.port}")
     if lan_ip and lan_ip != "127.0.0.1":
-        print(f"  Network:  https://{lan_ip}:{args.port}")
+        print(f"  Network:  {scheme}://{lan_ip}:{args.port}")
     print("-" * 68)
-    print("  ⚠️  BROWSER SECURITY OVERRIDE REQUIRED:")
-    print("  Because this uses a self-signed certificate, your browser will")
-    print("  display a warning (e.g., 'Your connection is not private').")
-    print()
-    print("  To bypass the warning:")
-    print("  • Chrome / Edge:  Click 'Advanced' -> 'Proceed to ... (unsafe)'")
-    print("    (If no link appears, click anywhere on the page and type 'thisisunsafe')")
-    print("  • Safari:         Click 'Show Details' -> 'visit this website'")
-    print("  • Firefox:        Click 'Advanced' -> 'Accept the Risk and Continue'")
-    print("  • Android Chrome: Tap 'Advanced' -> 'Proceed to ... (unsafe)'")
-    print("-" * 68)
-    print("  💡 Why HTTPS?")
-    print("  Chrome and mobile browsers require HTTPS for Clipboard copy,")
-    print("  Service Worker offline caching, and PWA installation on LAN IPs.")
+    if args.http:
+        print("  ℹ️  PLAIN HTTP MODE:")
+        print("  Intended for use behind a TLS-terminating reverse proxy.")
+        print("  Without HTTPS, browsers block Clipboard copy, Service Worker")
+        print("  caching, and PWA installation on LAN addresses.")
+    else:
+        print("  ⚠️  BROWSER SECURITY OVERRIDE REQUIRED:")
+        print("  Because this uses a self-signed certificate, your browser will")
+        print("  display a warning (e.g., 'Your connection is not private').")
+        print()
+        print("  To bypass the warning:")
+        print("  • Chrome / Edge:  Click 'Advanced' -> 'Proceed to ... (unsafe)'")
+        print("    (If no link appears, click anywhere on the page and type 'thisisunsafe')")
+        print("  • Safari:         Click 'Show Details' -> 'visit this website'")
+        print("  • Firefox:        Click 'Advanced' -> 'Accept the Risk and Continue'")
+        print("  • Android Chrome: Tap 'Advanced' -> 'Proceed to ... (unsafe)'")
+        print("-" * 68)
+        print("  💡 Why HTTPS?")
+        print("  Chrome and mobile browsers require HTTPS for Clipboard copy,")
+        print("  Service Worker offline caching, and PWA installation on LAN IPs.")
     print("=" * 68)
     print("  Press Ctrl+C to stop the server.\n")
 
