@@ -1440,6 +1440,45 @@ a.btn:hover,
   margin-left: 6px;
 }
 
+
+.lineup-table td.table-actions .btn-channel-toggle {
+  padding: 0 10px;
+}
+
+.btn-toggle-fav.is-active {
+  background: rgba(255, 176, 32, 0.12);
+  border-color: rgba(255, 176, 32, 0.5);
+  color: var(--accent-amber);
+}
+
+.btn-toggle-fav.is-active svg polygon {
+  fill: currentColor;
+}
+
+.btn-toggle-fav.is-active:hover {
+  background: rgba(255, 176, 32, 0.2);
+  border-color: var(--accent-amber);
+  color: var(--accent-amber);
+  box-shadow: 0 0 16px rgba(255, 176, 32, 0.25);
+}
+
+.btn-toggle-hidden.is-active {
+  background: rgba(255, 69, 96, 0.1);
+  border-color: rgba(255, 69, 96, 0.45);
+  color: var(--accent-red);
+}
+
+.btn-toggle-hidden.is-active:hover {
+  background: rgba(255, 69, 96, 0.18);
+  border-color: var(--accent-red);
+  color: var(--accent-red);
+  box-shadow: 0 0 16px rgba(255, 69, 96, 0.25);
+}
+
+.lineup-row-disabled td.table-actions {
+  opacity: 1;
+}
+
 /* Channel Signal Notice Card */
 .channel-signal-notice {
   background-color: var(--bg-card);

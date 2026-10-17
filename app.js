@@ -145,7 +145,7 @@ const state = {
   pollTimer: null,
   filterText: '',
   filters: {
-    status: 'allowed', // 'allowed', 'all', 'favorites', 'hidden'
+    status: 'all', // 'allowed', 'all', 'favorites', 'hidden'
     band: 'all',       // 'all', 'vhf', 'vhf-low', 'vhf-high', 'uhf'
     format: 'all',     // 'all', 'atsc3', 'atsc1', 'hd', 'sd'
     drm: 'all',        // 'all', 'drm', 'nodrm'
@@ -2808,7 +2808,7 @@ function setupLineupFilters() {
   }
 
   const handleFilterChange = () => {
-    state.filters.status = filterStatusSelect?.value || 'allowed';
+    state.filters.status = filterStatusSelect?.value || 'all';
     state.filters.band = filterBandSelect?.value || 'all';
     state.filters.format = filterFormatSelect?.value || 'all';
     state.filters.drm = filterDrmSelect?.value || 'all';
@@ -2822,12 +2822,12 @@ function setupLineupFilters() {
 
   const resetFilters = () => {
     state.filters = {
-      status: 'allowed',
+      status: 'all',
       band: 'all',
       format: 'all',
       drm: 'all',
     };
-    if (filterStatusSelect) filterStatusSelect.value = 'allowed';
+    if (filterStatusSelect) filterStatusSelect.value = 'all';
     if (filterBandSelect) filterBandSelect.value = 'all';
     if (filterFormatSelect) filterFormatSelect.value = 'all';
     if (filterDrmSelect) filterDrmSelect.value = 'all';
@@ -2854,8 +2854,8 @@ function renderActiveFilterChips() {
 
   const chips = [];
 
-  if (state.filters.status !== 'allowed') {
-    const labels = { all: 'All Channels', favorites: 'Favorites', hidden: 'Hidden' };
+  if (state.filters.status !== 'all') {
+    const labels = { allowed: 'Allowed Only', favorites: 'Favorites', hidden: 'Hidden' };
     chips.push({ key: 'status', label: `Status: ${labels[state.filters.status] || state.filters.status}` });
   }
 
@@ -2907,8 +2907,8 @@ function renderActiveFilterChips() {
     btn.addEventListener('click', () => {
       const key = btn.getAttribute('data-filter-key');
       if (key === 'status') {
-        state.filters.status = 'allowed';
-        if (filterStatusSelect) filterStatusSelect.value = 'allowed';
+        state.filters.status = 'all';
+        if (filterStatusSelect) filterStatusSelect.value = 'all';
       } else if (key === 'band') {
         state.filters.band = 'all';
         if (filterBandSelect) filterBandSelect.value = 'all';
@@ -2926,8 +2926,8 @@ function renderActiveFilterChips() {
   const clearAllBtn = document.getElementById('btn-chips-clear-all');
   if (clearAllBtn) {
     clearAllBtn.addEventListener('click', () => {
-      state.filters = { status: 'allowed', band: 'all', format: 'all', drm: 'all' };
-      if (filterStatusSelect) filterStatusSelect.value = 'allowed';
+      state.filters = { status: 'all', band: 'all', format: 'all', drm: 'all' };
+      if (filterStatusSelect) filterStatusSelect.value = 'all';
       if (filterBandSelect) filterBandSelect.value = 'all';
       if (filterFormatSelect) filterFormatSelect.value = 'all';
       if (filterDrmSelect) filterDrmSelect.value = 'all';
@@ -3070,6 +3070,16 @@ function renderLineup() {
 
     // Signal Quality meter (live tuner signal takes precedence over static scan signal)
     const signalHtml = getLineupSignalHtml(ch, activeTuner);
+    
+    // Favorite / hidden toggles (written to the tuner via lineup.post)
+    const toggleHtml = `
+        <button class="btn btn-sm btn-secondary btn-channel-toggle btn-toggle-fav${isFav ? ' is-active' : ''}" data-num="${ch.GuideNumber}" data-mode="${isFav ? '-' : '+'}" title="${isFav ? 'Remove from favorites' : 'Add to favorites'}" aria-label="${isFav ? 'Remove from favorites' : 'Add to favorites'}">
+          ${uiIcon('star', 0.8)}
+        </button>
+        <button class="btn btn-sm btn-secondary btn-channel-toggle btn-toggle-hidden${isHidden ? ' is-active' : ''}" data-num="${ch.GuideNumber}" data-mode="${isHidden ? '-' : 'x'}" title="${isHidden ? 'Unhide channel' : 'Hide channel'}" aria-label="${isHidden ? 'Unhide channel' : 'Hide channel'}">
+          ${uiIcon(isHidden ? 'eye-slash' : 'eye', 0.8)}
+        </button>
+    `;
 
     // Actions for channel
     let actionsHtml = '';
@@ -3157,7 +3167,7 @@ function renderLineup() {
         ${signalHtml}
       </td>
       <td class="table-actions">
-        ${actionsHtml}
+        ${toggleHtml}${actionsHtml}
       </td>
     `;
     lineupTbody.appendChild(tr);
@@ -3207,6 +3217,40 @@ function renderLineup() {
       openPlayer(chNum, chName, url);
     });
   });
+
+  // Attach favorite / hidden toggle listeners
+  document.querySelectorAll('.btn-channel-toggle').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const chNum = btn.getAttribute('data-num');
+      btn.disabled = true;
+      try {
+        await setChannelLineupState(chNum, btn.getAttribute('data-mode'));
+        updateLineupStats();
+        renderLineup();
+      } catch (err) {
+        btn.disabled = false;
+        showAlert(`Failed to update channel <code>${chNum}</code>: ${err.message}`, 'error');
+      }
+    });
+  });
+}
+
+
+/**
+ * Sets a channel's lineup state on the tuner: '+' favorite, 'x' hidden, '-' normal.
+ */
+async function setChannelLineupState(guideNumber, mode) {
+  const res = await hdhrFetch(
+    `http://${state.currentIp}/lineup.post?favorite=${encodeURIComponent(mode + guideNumber)}`,
+    { method: 'POST' }
+  );
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+  const ch = state.lineup.find((c) => String(c.GuideNumber) === String(guideNumber));
+  if (ch) {
+    ch.Favorite = mode === '+' ? 1 : 0;
+    ch.Enabled = mode === 'x' ? 0 : 1;
+  }
 }
 
 function exportM3u() {
