@@ -360,7 +360,13 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
 
 def main():
     parser = argparse.ArgumentParser(description="Serve HDHR Dash over local HTTPS with a self-signed certificate.")
-    parser.add_argument("port", nargs="?", type=int, default=8443, help="Port to serve on (default: 8443)")
+    parser.add_argument(
+        "port",
+        nargs="?",
+        type=int,
+        default=int(os.environ.get("HDHR_PORT", "8443")),
+        help="Port to serve on (default: 8443, env: HDHR_PORT)"
+    )
     parser.add_argument("--bind", "-b", default="0.0.0.0", help="Address to bind to (default: 0.0.0.0)")
     parser.add_argument("--temp", action="store_true", help="Use an ephemeral certificate that is deleted on exit")
     parser.add_argument("--cert", default=None, help="Custom certificate file path (default: cert.pem)")
